@@ -29,7 +29,7 @@ another swarm topic. <sup>[2](#2)</sup>
 
 **In order to:**
 * Have selective replication.
-* Replicate multiple stores on the same stream.
+* Replicate multiple stores & applications on the same swarm-topic.
 * Let applications utilize the exchange-channel for their own business logic.
 
 **I want to**
