@@ -3,56 +3,65 @@ kappa-db/replic8
 
 Request For Comment! [open an issue](https://github.com/telamon/replic8/issues)
 
-##### API Poposal Draft 0.3.0
+##### API Poposal 0.4.0
 
-> Replication manager for [hypercore](mafintosh/hypercore) & [hypercore-protocol](mafintosh/hypercore-protocol) compatible data-structures.
+> Replication middleware interface for [hypercore](mafintosh/hypercore) & [hypercoreprotocol](mafintosh/hypercore-protocol) compatible data-structures.
 
 
-### Introduction
-In a near future where decentralized applications are-aware-of/interact-with each other
-we can assume that on some swarm topics (_exchange-swarms <sup>[1](#1)</sup>_) - peers will
-benefit if they can replicate multiple applications using a single peer connection.
-(_mixed core type replication_)
+## Interface
 
-The goal is not to create one mega-topic where all available data is
-transferred to all available peers - but rather provide the ability to side-load secondary resources using references dynamically.
+```js
+const app = {
+  // Populate local manifest
+  announce(manifest, next) {
+    const {keys, meta} = manifest
+    share(keys, meta)
+  },
 
-> **use case:** Let cabal-chat users publish `ResourceReference{publicKey, coreType}` or `dat://` link messages,
-If a peer's cabal-client has a handler for `coreType` it can replicate
-the referenced resource directly.
+  // Filter remote manifest
+  accept(manifest, next) {
+    const {keys, meta} = manifest
+    next(keys)
+  },
 
-It's likely that the target audience for the referenced asset is the peer on the other end of the socket.
-Thus it makes sense to replicate assets on demand using the already established connection without having to find the same peer on
-another swarm topic. <sup>[2](#2)</sup>
+  // provide instance via key to other
+  // middleware and replication
+  resolve(keys, replicate) {
+    replicate(null, keys.map(i => hypercore(storage, i)))
+  }
+}
 
-![stacking advertisement](./fig1.png)
+multifeed.use(app)
+```
 
-**In order to:**
-* Have selective replication.
-* Replicate multiple stores & applications on the same swarm-topic.
-* Let applications utilize the exchange-channel for their own business logic.
+## Examples
 
-**I want to**
-* Expose multifeed's superpowers (multiplexer + connection manager) as a standalone library.
-* Provide an intuitive and straightforward API for core-stores and applications.
-* Be backwards compatible with existing multifeed & kappa-db applications.
-* ~~Safely expose hypercore-protocol extensions for middleware~~ <sup>[3](#3)</sup>
 
-### Examples
+**Replication filter**
+```js
+// Given an application that attaches `lastActivity` during announce().
+// Filter stale feeds from replication.
+const timeFilter = {
+  accept (manifest, next) {
+    const selected = []
+    manifest.meta.forEach((data, n) => {
+      if (data.lastActivity < 60*60*24*30) selected.push(data[n])
+    })
+    next(selected)
+  }
+}
 
-Assume the following environment for all examples:
+multifeed.use(timeFilter)
+```
+
+**Define a store that uses multifeed as a replication manager**
 
 ```js
 const ram = require('random-access-memory')
 const hypercore = require('hypercore')
 const hyperswarm = require('hyperswarm')
-const replic8 = require('replic8')
-```
+const { replicate } = require('multifeed')
 
-
-**Bare minimum**
-
-```js
 // A very optimistic core store
 const store = [ hypercore(ram), hypercore(ram), hypercore(ram) ]
 
@@ -91,13 +100,47 @@ const swarm = hyperswarm.join('some topic')
 swarm.on('connection', mgr.connect)
 ```
 
+**A core type decorator**
+```
+const ram = require('random-access-memory')
+const multifeed = require('multifeed')
+const { replicate } = multifeed
+
+const TypeDecorator = {
+  announce: ({keys, meta}, next) {
+  keys.forEach(key => {
+      this.resolve(key).get(0, (err, data) => {
+          if (err) // TODO: refactor announce(err, keys, meta)
+
+          // attempt decoding DEP-0007 header
+          try {
+            const hdr = parseHeader(data)
+            // decorate replicated data with core-type
+            meta[keys].type = hdr.type
+          } catch (err) {
+            console.warn('Failed decoding header', key, err)
+          }
+          next(keys, meta)
+      })
+    })
+  })
+}
+
+const mgr = replicate()
+mgr.use(multifeed(ram, (...args) => hypercore(...args)))
+mgr.use(multifeed(ram, (...args) => hyperdrive(...args)))
+mgr.use(multifeed(ram, (...args) => hypertrie(...args)))
+
+mgr.use(TypeDecorator)
+```
+
 **Backwards compatibility**
 
 If we extend `multifeed` with a new option, it would enable us to mount
 multifeed onto an external replication manager.
 
-When option is omitted, multifeed could instantiate it's own manager instance
-internally thus continue to operate as before.
+When option is omitted, multifeed instantiates it's own manager instance
+internally.
 
 ```js
 const multifeed = require('multifeed')
@@ -134,7 +177,7 @@ key yet. This flags turns off that behaviour.
 #### `mgr.use(namespace, middleware)`
 
 Assembles an application stack where each middleware will be invoked in order of
-registration FIFO.
+registration.
 
 `namespace` (optional) creates a virtual sub-exchange channel that helps
 prevent a core ending up in the wrong store or being instantiated with wrong
@@ -146,7 +189,7 @@ optionally `resolve`
 #### middleware `announce: function(manifest, share)`
 Invoked during connection initialization directly after a successful handshake.
 
-`manifest` - Object, contains previous middleware results as {keys:[], headers:[]}
+`manifest` - Object, contains previous middleware results as `{keys:[], headers:[]}`
 
 `share(keys, headers)` - function, takes two arrays, where `keys`
 is required to contain only feed-keys and `headers` is expected to contain
@@ -243,3 +286,4 @@ the events `end` and `finish` will not be fired properly on the stream.
 
 Therefore it's nicer to drop the connection instead of leaving the other peer
 "hanging".
+
