@@ -60,7 +60,7 @@ const store = [ hypercore(ram), hypercore(ram), hypercore(ram) ]
 const mgr = replic8(encryptionKey) , opts)
 
 mgr.use({
-  advertise (manifest, share) {
+  announce (manifest, share) {
     // Share all available feeds
     share(store)
   },
@@ -71,7 +71,7 @@ mgr.use({
   },
 
   resolve (keys, next) {
-    const cores offer.keys.map(key, n) => {
+    const cores = offer.keys.map(key, n) => {
       // fetch core from store
       let core = store.find(c => c.key === key)
 
@@ -127,7 +127,7 @@ const cabl = Cabal(ram, null, {replicate: mgr})
 
 `opts.noforward` the manager keeps track of which
 keys have been exchanged to which peers, if a new key is
-encountered then by default the manager initiates a new advertise
+encountered then by default the manager initiates a new announce
 exchange with all active peers that have not been offered that
 key yet. This flags turns off that behaviour.
 
@@ -140,10 +140,10 @@ registration FIFO.
 prevent a core ending up in the wrong store or being instantiated with wrong
 class.
 
-`middleware` should be an object that responds to `advertise`, `accept` and
+`middleware` should be an object that responds to `announce`, `accept` and
 optionally `resolve`
 
-#### middleware `advertise: function(manifest, share)`
+#### middleware `announce: function(manifest, share)`
 Invoked during connection initialization directly after a successful handshake.
 
 `manifest` - Object, contains previous middleware results as {keys:[], headers:[]}
@@ -158,7 +158,7 @@ The length of both arrays is expected to be equal.
 Invoked when remote end has advertised a list of cores
 
 `offer` - Object supports keys: `keys` and `headers`  representing
-the same object that was advertised by remote or selected by
+the same object that was announced by remote or selected by
 the previous middleware.
 
 `select` - Function `function(err, selectedKeys)`
@@ -234,7 +234,7 @@ for a dat-dep recognition.
 <a name="4"></a>
 <sup>4.</sup> The reason for mercilessly disconnecting a peer if a core
 is not resolved is because
-once `advertise` and `select` messages have been exchanged
+once `announce` and `select` messages have been exchanged
 both peers are trusted to replicate the negotiated set of cores;
 
 Unless I'm mistaken, if only one of the two peers replicate a core
