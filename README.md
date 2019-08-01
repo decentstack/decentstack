@@ -110,8 +110,6 @@ const TypeDecorator = {
   announce: ({keys, meta}, next) {
   keys.forEach(key => {
       this.resolve(key).get(0, (err, data) => {
-          if (err) // TODO: refactor announce(err, keys, meta)
-
           // attempt decoding DEP-0007 header
           try {
             const hdr = parseHeader(data)
