@@ -101,7 +101,7 @@ swarm.on('connection', mgr.connect)
 ```
 
 **A core type decorator**
-```
+```js
 const ram = require('random-access-memory')
 const multifeed = require('multifeed')
 const { replicate } = multifeed
