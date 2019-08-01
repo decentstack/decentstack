@@ -45,7 +45,7 @@ const timeFilter = {
   accept (manifest, next) {
     const selected = []
     manifest.meta.forEach((data, n) => {
-      if (data.lastActivity < 60*60*24*30) selected.push(data[n])
+      if (new Date() - data.lastActivity < 60*60*24*30) selected.push(data[n])
     })
     next(selected)
   }
