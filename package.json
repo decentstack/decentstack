@@ -9,7 +9,7 @@
   "scripts": {
     "test": "tape test.js",
     "debug": "node inspect $(npm bin)/tape test.js",
-    "protobuf": "$(npm bin)/protocol-buffers -o messages.js schema.proto",
+    "protobuf": "$(npm bin)/protocol-buffers -o lib/messages.js schema.proto",
     "lint": "standard"
   },
   "dependencies": {
