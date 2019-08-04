@@ -38,6 +38,10 @@ class ArrayStore extends EventEmitter {
   }
 
   // Blindly accept all feeds
+  // in a real world scenario, 'GeneralPurpose' stores should be last
+  // in the middleware stack and not implement the accept
+  // method relying on other applications to handle the filtering.
+  // calling `next()` without arguments is also a valid "don't care" operation.
   accept ({ key, meta }, next) {
     next(null, true)
   }
