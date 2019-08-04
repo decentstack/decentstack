@@ -257,7 +257,6 @@ class Replic8 extends EventEmitter {
   }
 }
 
-
 module.exports = function (...args) {
   return new Replic8(...args)
 }
@@ -269,4 +268,3 @@ function readyAll (s, cb) {
   const p = n => !s[n] ? cb(s) : s[n].ready(() => p(++n))
   p(0)
 }
-

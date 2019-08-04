@@ -2,59 +2,9 @@ const test = require('tape')
 const hypercore = require('hypercore')
 const ram = require('random-access-memory')
 const ReplicationManager = require('./index')
+const ArrayStore = require('./examples/array-store.js')
 
-// Define a simple core-manager that uses
-// an array to keep track of cores
-class ArrayStore {
-  constructor (storage, factory, generateNFeeds) {
-    this.storage = storage
-    this.factory = factory
-    this.feeds = []
-    if (generateNFeeds) {
-      for (let i = 0; i < generateNFeeds; i++) {
-        const feed = this.factory(this.storage)
-        this.feeds.push(feed)
-        feed.ready(() => {
-          feed.append(`Generated #${i}`, err => {
-            if (err) throw err
-          })
-        })
-      }
-    }
-  }
-
-  readyFeeds (cb) {
-    const s = [...this.feeds]
-    const p = n => !s[n] ? cb(s) : s[n].ready(() => p(++n))
-    p(0)
-  }
-
-  announce ({ keys, meta }, next) {
-    this.readyFeeds(snapshot => {
-      snapshot.forEach(feed => {
-        const key = feed.key.hexSlice()
-        keys.push(key)
-        meta[key] = { from: 'ArrayStore' }
-      })
-      next(null, keys, meta)
-    })
-  }
-
-  accept ({ key, meta }, next) {
-    next(null, true)
-  }
-
-  resolve (key, next) {
-    let feed = this.feeds.find(f => f.key.hexSlice() === key)
-    if (!feed) {
-      feed = this.factory(this.storage, key)
-      this.feeds.push(feed)
-    }
-    next(null, feed)
-  }
-}
-
-test.only('The replic8 interface', t => {
+test('The replic8 interface', t => {
   t.plan(31)
   const encryptionKey = Buffer.alloc(32)
   encryptionKey.write('foo bars')
