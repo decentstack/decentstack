@@ -5,7 +5,7 @@ const ReplicationManager = require('./index')
 const ArrayStore = require('./examples/array-store.js')
 
 test('The replic8 interface', t => {
-  t.plan(31)
+  t.plan(38)
   const encryptionKey = Buffer.alloc(32)
   encryptionKey.write('foo bars')
   const mgr = ReplicationManager(encryptionKey)
@@ -15,6 +15,7 @@ test('The replic8 interface', t => {
   let announceInvokes = 0
   let acceptInvokes = 0
   let resolveInvokes = 0
+  const timestamp = new Date().getTime()
   mgr.use({
     announce ({ keys, meta, resolve }, next) {
       announceInvokes++
@@ -23,7 +24,7 @@ test('The replic8 interface', t => {
       t.equal(typeof resolve, 'function', 'resolve is a function')
       t.equal(typeof next, 'function', 'next is a function')
       keys.forEach(k => {
-        meta[k].timestamp = new Date()
+        meta[k].timestamp = timestamp
       })
       next(null, keys, meta) // Test append timestamps
     },
@@ -31,6 +32,7 @@ test('The replic8 interface', t => {
       acceptInvokes++
       t.equal(typeof key, 'string', 'key is a hexstring')
       t.equal(typeof meta, 'object', 'meta is object')
+      t.equal(meta.from, 'ArrayStore')
       t.equal(typeof resolve, 'function', 'resolve is a function')
       t.equal(typeof next, 'function', 'next is a function')
       next() // Test dosen't accept anything
@@ -54,6 +56,13 @@ test('The replic8 interface', t => {
 
   // Remote has 1 feed
   const remoteStore = new ArrayStore(ram, hypercore, 1)
+  remoteMgr.use({
+    accept ({ meta }, next) {
+      t.equal(meta.from, 'ArrayStore', 'Remote sees from ArrayStore')
+      t.equal(meta.timestamp, timestamp, 'Remote sees timestamp')
+      next()
+    }
+  })
   remoteMgr.use(remoteStore)
 
   let imLast = false

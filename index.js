@@ -88,38 +88,30 @@ class Replic8 extends EventEmitter {
       })
     }, (err, res) => {
       if (err) return cb(err)
-      else if (!res.length) { debugger; return cb(new Error('FeedNotResolvedError,  ' + key))}
+      else if (!res.length) return cb(new Error('FeedNotResolvedError,  ' + key))
       else return cb(null, res[0])
     })
   }
 
-  collectManifest (cb) {
-    const res = {}
-    this.namespaces.forEach(ns => {
-      const stack = this._middleware[ns].filter(m => typeof m.announce === 'function')
-      res[ns] = { keys: [], meta: {} }
-      const next = (i) => {
-        const app = stack[i]
-        if (!app) return cb(null, res)
+  collectManifest (namespace, cb) {
+    const res = { keys: [], meta: {} }
+    this.iterateStack(namespace, 'announce', true, (app, next) => {
+      const ctx = Object.assign({
+        resolve: keys => this.resolveFeeds(keys)
+      }, res)
 
-        const ctx = Object.assign({
-          resolve: keys => this.resolveFeeds(keys)
-        }, res[ns])
-
-        app.announce(ctx, (err, keys, meta) => {
-          if (err) return cb(err)
-          keys.forEach(key => {
-            assert(typeof key === 'string', 'Expected key to be a hex-string')
-            let nres = res[ns]
-
-            if (nres.keys.indexOf(key) === -1) nres.keys.push(key)
-            if (meta[key]) Object.assign(nres.meta[key], meta[key])
-          })
-          next(++i)
+      app.announce(ctx, (err, keys, meta) => {
+        if (err) return next(err)
+        keys.forEach(key => {
+          if (Buffer.isBuffer(key)) key = key.hexSlice()
+          assert(typeof key === 'string', 'Expected key to be a hex-string')
+          if (res.keys.indexOf(key) === -1) res.keys.push(key)
+          if (meta[key]) Object.assign(res.meta[key], meta[key])
         })
-      }
-      next(0)
-    })
+        next()
+      })
+    },
+    err => cb(err, res))
   }
   // ----------- Internal API --------------
 
@@ -160,13 +152,13 @@ class Replic8 extends EventEmitter {
   _onConnectionStateChanged (state, prev, err, conn) {
     switch (state) {
       case STATE_ACTIVE:
-        this.collectManifest((err, manifests) => {
-          // this is an indicator of faulty middleware
-          // maybe even kill the process?
-          if (err) return conn.kill(err)
-          this.namespaces.forEach(ns => {
-            const manifest = manifests[ns]
+        this.namespaces.forEach(ns => {
+          this.collectManifest(ns, (err, manifest) => {
+            // this is an indicator of faulty middleware
+            // maybe even kill the process?
+            if (err) return conn.kill(err)
             if (!manifest) return
+
             const reqTime = (new Date()).getTime()
             conn.sendManifest(ns, manifest, (err, selectedFeeds) => {
               if (err) return conn.kill(err)
@@ -190,16 +182,20 @@ class Replic8 extends EventEmitter {
   /*
    * traverses the middleware stack yielding aps
    * that support given function on given namespace,
+   * reverse (optional) default: false, traverses reverse stack order.
    * cb((app, next) => {})
    * done((err, collectedResults) => {})
    */
-  iterateStack (namespace, fname, cb, done) {
+  iterateStack (namespace, fname, reverse = false, cb, done) {
+    if (typeof reverse === 'function') return this.iterateStack(namespace, fname, false, reverse, cb)
+
     if (typeof done !== 'function') done = (err) => { if (err) throw err }
 
     if (!this._middleware[namespace]) {
       cb(new Error(`No middleware#${fname} registered for namespace: ${namespace}`))
     }
-    const stack = this._middleware[namespace].filter(m => typeof m[fname] === 'function')
+    let stack = this._middleware[namespace].filter(m => typeof m[fname] === 'function')
+    if (reverse) stack = stack.reverse()
 
     const results = []
     const next = (i, err) => {
