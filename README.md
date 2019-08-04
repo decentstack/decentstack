@@ -1,37 +1,72 @@
 kappa-db/replic8
 =================
 
+
+> Replication manager for [hypercore](mafintosh/hypercore) & [hypercoreprotocol](mafintosh/hypercore-protocol) compatible data-structures.
+
+##### API Poposal 0.5.0
 Request For Comment! [open an issue](https://github.com/telamon/replic8/issues)
 
-##### API Poposal 0.4.0
-
-> Replication middleware interface for [hypercore](mafintosh/hypercore) & [hypercoreprotocol](mafintosh/hypercore-protocol) compatible data-structures.
+This is an working alpha, feedback and testing is highly appreciated!
 
 
-## Interface
+- [x] Dynamic feed exchange (live + oneshot)
+- [x] Track peer-connections and feeds
+- [x] Implement middleware interface
+- [ ] Realtime feed forwards
+- [ ] Provide backwards compatibility with multifeed
+- [ ] Update <a href="#api">API-docs</a> outdated!
 
+
+## Usage
+```js
+const middleware1 = require('...')
+const replic8 = require('replic8')
+const hyperswarm = require('hyperswarm')
+
+// Communication and exchange encryption
+const swarmKey = Buffer.alloc(32)
+swarmKey.write('passwords and secrets')
+
+// Initialize a new manger
+const mgr = replic8(swarmKey, { live: true })
+
+mgr.on('error', console.error) // Subscribe to all errors
+
+// register some filters or decorators
+mgr.use(middleware1)
+
+// lastly register your core storage
+mgr.use(aCoreStorage)
+
+const swarm = hyperswarm.join('hash the swarmkey')
+swarm.on('connection', mgr.handleConnection)
+```
+
+## Middleware Interface
+Is up to date `v0.5.0` !
 ```js
 const app = {
-  // Populate local manifest
-  announce(manifest, next) {
-    const {keys, meta} = manifest
-    share(keys, meta)
+  // Collect and share feeds and metadata
+  announce({ keys, meta }, next) {
+    next(null, keys, meta)
   },
 
-  // Filter remote manifest
-  accept(manifest, next) {
-    const {keys, meta} = manifest
-    next(keys)
+  // Filter incoming shares
+  accept({key, meta}, next) {
+    const select = meta.type === 'hyperdrive'
+    next(null, select)
   },
 
   // provide instance via key to other
   // middleware and replication
-  resolve(keys, replicate) {
-    replicate(null, keys.map(i => hypercore(storage, i)))
+  resolve(key, next) {
+    const feed = findFeedByKeySomehow(key)
+    next(null, feed)
   }
 }
 
-multifeed.use(app)
+mgr.use(app)
 ```
 
 ## Examples
@@ -42,12 +77,12 @@ multifeed.use(app)
 // Given an application that attaches `lastActivity` during announce().
 // Filter stale feeds from replication.
 const timeFilter = {
-  accept (manifest, next) {
-    const selected = []
-    manifest.meta.forEach((data, n) => {
-      if (new Date() - data.lastActivity < 60*60*24*30) selected.push(data[n])
-    })
-    next(selected)
+  accept ({key, meta}, next) {
+    if (new Date().getTime() - data.lastActivity < 60*60*24*30) {
+      next(null, key)
+    } else {
+      next()
+    }
   }
 }
 
@@ -125,10 +160,11 @@ const TypeDecorator = {
 }
 
 const mgr = replicate()
+// Register 3 instances of multifeed, each hosting different cores
 mgr.use(multifeed(ram, (...args) => hypercore(...args)))
 mgr.use(multifeed(ram, (...args) => hyperdrive(...args)))
 mgr.use(multifeed(ram, (...args) => hypertrie(...args)))
-
+// watch core-type metadata be transmitted to other peers
 mgr.use(TypeDecorator)
 ```
 
@@ -159,9 +195,9 @@ const cabl = Cabal(ram, null, {replicate: mgr})
 
 // or mgr.use(cabl)
 ```
-### API
+## API
 
-#### `replic8(encryptionKey, opts)`
+#### `const mgr = replic8(encryptionKey, opts)`
 
 `encryptionKey` pre-shared-key Buffer(32), used for exchange & meta message encryption
 `opts` hypercore-protocol opts
@@ -184,7 +220,7 @@ class.
 `middleware` should be an object that responds to `announce`, `accept` and
 optionally `resolve`
 
-#### middleware `announce: function(manifest, share)`
+#### middleware `announce: function(context, next)`
 Invoked during connection initialization directly after a successful handshake.
 
 `manifest` - Object, contains previous middleware results as `{keys:[], headers:[]}`
@@ -195,7 +231,7 @@ serializable Objects.
 The length of both arrays is expected to be equal.
 
 
-#### middleware `accept: function(offer, select)`
+#### middleware `accept: function(context, next)`
 Invoked when remote end has advertised a list of cores
 
 `offer` - Object supports keys: `keys` and `headers`  representing
@@ -205,12 +241,12 @@ the previous middleware.
 `select` - Function `function(err, selectedKeys)`
 If error is encountered, peer will be dropped?
 
-#### middleware `resolve: function(keys, next)`
+#### middleware `resolve: function(key, next)`
 (*optional*)
 
-`keys` - Array of keys as hex-strings
+`key` - hex-string
 
-`next` - Function `function(err, cores)`
+`next` - Function `function(err, core)`
 
 If `middleware.resolve` callback is present, it will be invoked right before replication starts.
 It expects you to map any of the requested `keys` to cores
@@ -223,36 +259,54 @@ will be emitted on the manager instance and the peer-connection will be
 dropped.<sup>[4](#4)</sup>
 
 
-#### `mgr.peers`
+#### `mgr.connections`
 
-List of active peers
+List of active PeerConnections
 
 #### `mgr.middleware`
 
 The current middleware stack
 
-### `mgr.key`
+#### `mgr.key`
 
 Exchange channel encryption key
 
-### `mgr.replicate(opts)`
+#### `mgr.replicate(opts)`
+Creates a PeerConnection returns it's stream
+(compatibility)
 
-Quack like a feed,
-exchange an exchange-manager???
+returns `stream`
 
-### event `'connected', peerInfo`
+#### `mgr.handleConnection(stream)`
+The preffered way to add peer-connections to the manager
+as opposite to `mgr.replicate()`.
 
-When a new peer connection is added to manager
+returns `PeerConnection`
 
-### event `'disconnect', peerInfo`
 
-When peer is dropped
+#### event `'connected', PeerConnection`
 
-### event `'error'`
+Emitted when a new peer connection is added to manager
+
+#### event `'disconnect', err, PeerConnection`
+
+Emitted whenever a peer connection is dropped
+
+#### event `'error'`
+
+### `PeerConnection`
+
+#### getter `conn.state`
+
+returns current connection state: `init|active|dead`
+
+> There's alot missing from this section, please see
+> [source](./lib/peer-connection.js)
 
 ## License
 
-I believe that the implementation is a part of [kappa-db](https://github.com/kappa-db) project and licensed under the same ISC license
+This project is based on the research from [kappa-db](https://github.com/kappa-db)
+and is licensed accordingly under ISC.
 
 ---
 
