@@ -1,0 +1,30 @@
+{
+  "name": "replic8",
+  "version": "1.0.0",
+  "description": "Hypercore replication manager",
+  "main": "index.js",
+  "author": "Tony Ivanov <telamohn@pm.me>",
+  "license": "MIT",
+  "private": false,
+  "scripts": {
+    "test": "tape test.js",
+    "debug": "node inspect $(npm bin)/tape test.js",
+    "protobuf": "$(npm bin)/protocol-buffers -o messages.js schema.proto",
+    "lint": "standard"
+  },
+  "dependencies": {
+    "end-of-stream": "^1.4.1",
+    "protocol-buffers-encodings": "^1.1.0",
+    "hypercore-protocol": "^6.11.1",
+    "hypercore": "^7.5.1"
+  },
+  "devDependencies": {
+    "random-access-memory": "^3.1.1",
+    "standard": "^12.0.1",
+    "tap-spec": "^5.0.0",
+    "tap-stream": "^0.2.0",
+    "tape": "^4.10.2",
+    "protocol-buffers": "^4.1.0",
+    "tapenet": "^1.4.0"
+  }
+}

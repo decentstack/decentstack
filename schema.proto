@@ -1,0 +1,32 @@
+syntax = "proto3";
+message Exchange {
+  oneof msg {
+    Manifest manifest = 1;
+    RequestReplicate req = 2;
+    // Allow using repl8 extension to send diverse messages?
+    // ApplicationDefined ad = 3;
+  }
+}
+
+message Manifest {
+  required uint32 id = 1;
+  required string namespace = 2;
+  repeated FeedDescriptor feeds = 3;
+}
+
+message FeedDescriptor {
+  required bytes key = 1;
+  repeated KV headers = 2;
+
+}
+
+message KV {
+  required string key = 1;
+  string value = 2;
+}
+
+message RequestReplicate {
+  required string namespace = 1;
+  repeated bytes keys = 2;
+  uint32 manifest_id = 3;
+}
