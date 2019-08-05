@@ -4,7 +4,7 @@ kappa-db/replic8
 
 > Replication manager for [hypercore](mafintosh/hypercore) & [hypercoreprotocol](mafintosh/hypercore-protocol) compatible data-structures.
 
-##### API Poposal 0.5.0
+##### API Poposal 0.6.0
 Request For Comment! [open an issue](https://github.com/telamon/replic8/issues)
 
 This is an working alpha, feedback and testing is highly appreciated!
@@ -13,8 +13,10 @@ This is an working alpha, feedback and testing is highly appreciated!
 - [x] Dynamic feed exchange (live + oneshot)
 - [x] Track peer-connections and feeds
 - [x] Implement middleware interface
-- [ ] Realtime feed forwards
-- [ ] Provide backwards compatibility with multifeed
+- [x] Realtime feed forwards
+- [x] Provide backwards compatibility with multifeed ([patch available!](https://github.com/telamon/multifeed/tree/feature/replic8-compat))
+- [ ] Provide connection statistics (transfer rate / transfered bytes / latency)
+- [ ] Test and document `unshare` operation
 - [ ] Update <a href="#api">API-docs</a> outdated!
 
 
@@ -44,16 +46,27 @@ swarm.on('connection', mgr.handleConnection)
 ```
 
 ## Middleware Interface
-Is up to date `v0.5.0` !
+Is up to date `v0.6.0` !
 ```js
 const app = {
-  // Collect and share feeds and metadata
-  announce({ keys, meta }, next) {
-    next(null, keys, meta)
+  share (next) {
+    next(null, [feed1, feed2, key4]) // Accepts feeds or keys (buffer/hexstring)
   },
 
-  // Filter incoming shares
-  accept({key, meta}, next) {
+  // Attach custom meta-data that will be transmitted
+  // during feed exchange
+  describe({ key, meta, resolve }, next) {
+
+    // resolve provides the feed if your middleware requires it.
+    resolve((err, feed) => {
+      if (err) return next(err)
+
+      next(null, { length: feed.length, timestamp: new Date() })
+    })
+  },
+
+  // Custom application logic to filter what to accept.
+  accept({ key, meta, resolve }, next) {
     const select = meta.type === 'hyperdrive'
     next(null, select)
   },
