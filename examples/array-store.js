@@ -25,36 +25,45 @@ class ArrayStore extends EventEmitter {
     }
   }
 
-  // Respond to announces with all feeds available
-  announce ({ keys, meta }, next) {
+  // Respond to share() with all feeds available
+  share (next) {
     this.readyFeeds(snapshot => {
-      snapshot.forEach(feed => {
-        const key = feed.key.hexSlice()
-        keys.push(key)
-        meta[key] = { from: 'ArrayStore' }
-      })
-      next(null, keys, meta)
+      next(null, snapshot)
     })
   }
 
-  // Blindly accept all feeds
-  // in a real world scenario, 'GeneralPurpose' stores should be last
-  // in the middleware stack and not implement the accept
-  // method relying on other applications to handle the filtering.
-  // calling `next()` without arguments is also a valid "don't care" operation.
-  accept ({ key, meta }, next) {
-    next(null, true)
+  describe ({ key }, next) {
+    this.readyFeeds(snapshot => {
+      // Add add origin: 'ArrayStore' if feed is ours.
+      if (snapshot.find(f => f.key.hexSlice() === key)) {
+        next(null, { origin: 'ArrayStore' })
+      } else next() // else ignore
+    })
   }
 
-  // Find feed by key in store or create it.
+  // accept() call for stores is a bit different.
+  // It means that a core/feed has passed the entire stack
+  // and been approved for storage, thus if it reaches
+  // the store, it means that the store must initialize
+  // a new feed if it dosen't exist.
+  accept ({ key, meta, resolve }, next) {
+    resolve((err, feed) => {
+      if (err) return next(err)
+      if (!feed) {
+        feed = this.factory(this.storage, key)
+        this.feeds.push(feed)
+        this.emit('feed', feed)
+      }
+      next(null, true)
+    })
+  }
+
+  // Find feed by key in store if exists
   resolve (key, next) {
-    let feed = this.feeds.find(f => f.key.hexSlice() === key)
-    if (!feed) {
-      feed = this.factory(this.storage, key)
-      this.feeds.push(feed)
-      this.emit('feed', feed)
-    }
-    next(null, feed)
+    this.readyFeeds(snapshot => {
+      let feed = snapshot.find(f => f.key.hexSlice() === key)
+      next(null, feed)
+    })
   }
 
   // waits for all feeds to be ready (sorry for awesomesauce)
