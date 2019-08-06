@@ -138,6 +138,7 @@ class Replic8 extends EventEmitter {
       key,
       meta
     }
+    ctx.resolve = ctx.resolve.bind(this)
 
     this.iterateStack(namespace, 'describe', true, (err, app, next) => {
       if (err) return cb(err)

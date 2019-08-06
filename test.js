@@ -6,7 +6,7 @@ const ReplicationManager = require('./index')
 const ArrayStore = require('./examples/array-store.js')
 
 test('The replic8 interface', t => {
-  t.plan(59)
+  t.plan(78)
   const encryptionKey = Buffer.alloc(32)
   encryptionKey.write('foo bars')
   const mgr = ReplicationManager(encryptionKey)
@@ -119,8 +119,8 @@ test('The replic8 interface', t => {
   }
 })
 
-test.only('Composite-core replication', t => {
-  t.plan(60)
+test('Composite-core replication', t => {
+  t.plan(11)
   const encryptionKey = Buffer.alloc(32)
   encryptionKey.write('foo bars')
 
@@ -140,8 +140,8 @@ test.only('Composite-core replication', t => {
     drive.writeFile('README.md', message, err => {
       t.error(err)
       t.equal(drive.version, 1, 'Version 1')
-      console.log('Drive metadata:', drive.metadata.discoveryKey.hexSlice(0, 6))
-      console.log('Drive content:', drive.content.discoveryKey.hexSlice(0, 6))
+      // console.log('Drive metadata:', drive.metadata.discoveryKey.hexSlice(0, 6))
+      // console.log('Drive content:', drive.content.discoveryKey.hexSlice(0, 6))
       mgr2.once('disconnect', (err, conn) => {
         t.error(err)
         t.ok(conn)
@@ -155,11 +155,9 @@ test.only('Composite-core replication', t => {
         t.ok(replDrive.content, 'content should have been replicated')
 
         t.equal(replDrive.version, 1, 'should also be on version 1')
-        debugger
         replDrive.readFile('README.md', (err, res) => {
           t.error(err)
-          debugger
-          message
+          // message
           t.end()
         })
       })
