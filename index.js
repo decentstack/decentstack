@@ -22,7 +22,7 @@ class Replic8 extends EventEmitter {
     this._middleware = {}
     this.connections = []
     this.extensions = [EXCHANGE]
-    if (Array.isArray(opts.extensions)) opts.extensions.forEach(e => this.extensions.push(e))
+    if (Array.isArray(opts.extensions)) this.extensions = [this.extensions, opts.extensions].sort()
 
     this._onConnectionStateChanged = this._onConnectionStateChanged.bind(this)
     this._onManifestReceived = this._onManifestReceived.bind(this)
