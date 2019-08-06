@@ -47,19 +47,23 @@ swarm.on('connection', mgr.handleConnection)
 
 ## Middleware Interface
 Is up to date `v0.6.0` !
+
+All callbacks are optional, a middleware can for instance implement only the `describe` callback.
 ```js
 const app = {
+
+  // Share available cores
   share (next) {
-    next(null, [feed1, feed2, key4]) // Accepts feeds or keys (buffer/hexstring)
+    next(null, [feed1, feed2, key4]) // Accepts cores or keys (buffer/hexstring)
   },
 
   // Attach custom meta-data that will be transmitted
-  // during feed exchange
+  // during core exchange
   describe({ key, meta, resolve }, next) {
 
     // resolve provides the feed if your middleware requires it.
     resolve((err, feed) => {
-      if (err) return next(err)
+      if (err) return next(err) // recover from middleware errors
 
       next(null, { length: feed.length, timestamp: new Date() })
     })
@@ -71,7 +75,7 @@ const app = {
     next(null, select)
   },
 
-  // provide instance via key to other
+  // provide core instance via key to other
   // middleware and replication
   resolve(key, next) {
     const feed = findFeedByKeySomehow(key)

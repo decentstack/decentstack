@@ -14,17 +14,18 @@
   },
   "dependencies": {
     "end-of-stream": "^1.4.1",
-    "protocol-buffers-encodings": "^1.1.0",
+    "hypercore": "^7.5.1",
     "hypercore-protocol": "^6.11.1",
-    "hypercore": "^7.5.1"
+    "protocol-buffers-encodings": "^1.1.0"
   },
   "devDependencies": {
+    "hyperdrive": "^9.16.0",
+    "protocol-buffers": "^4.1.0",
     "random-access-memory": "^3.1.1",
     "standard": "^12.0.1",
     "tap-spec": "^5.0.0",
     "tap-stream": "^0.2.0",
     "tape": "^4.10.2",
-    "protocol-buffers": "^4.1.0",
     "tapenet": "^1.4.0"
   }
 }

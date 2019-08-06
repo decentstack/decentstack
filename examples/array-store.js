@@ -16,11 +16,12 @@ class ArrayStore extends EventEmitter {
         const feed = this.factory(this.storage)
         this.feeds.push(feed)
         this.emit('feed', feed)
+        /* not hyperdrive compatible
         feed.ready(() => {
           feed.append(`Generated #${i}`, err => {
             if (err) throw err
           })
-        })
+        })*/
       }
     }
   }

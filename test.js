@@ -1,5 +1,6 @@
 const test = require('tape')
 const hypercore = require('hypercore')
+const hyperdrive = require('hyperdrive')
 const ram = require('random-access-memory')
 const ReplicationManager = require('./index')
 const ArrayStore = require('./examples/array-store.js')
@@ -118,12 +119,51 @@ test('The replic8 interface', t => {
   }
 })
 
-
-test.skip('Live feed forwarding', t => {
+test.only('Composite-core replication', t => {
   t.plan(60)
   const encryptionKey = Buffer.alloc(32)
   encryptionKey.write('foo bars')
-  const mgr = ReplicationManager(encryptionKey)
-  mgr.once('error', t.error)
 
+  const mgr1 = ReplicationManager(encryptionKey)
+  mgr1.once('error', t.error)
+  const store1 = new ArrayStore(ram, hyperdrive, 3)
+  mgr1.use(store1)
+
+  const mgr2 = ReplicationManager(encryptionKey)
+  mgr2.once('error', t.error)
+  const store2 = new ArrayStore(ram, hyperdrive, 1)
+  mgr2.use(store2)
+
+  store1.readyFeeds(snapshot => {
+    const [ drive ] = snapshot
+    const message = Buffer.from('Cats are everywhere')
+    drive.writeFile('README.md', message, err => {
+      t.error(err)
+      t.equal(drive.version, 1, 'Version 1')
+      console.log('Drive metadata:', drive.metadata.discoveryKey.hexSlice(0, 6))
+      console.log('Drive content:', drive.content.discoveryKey.hexSlice(0, 6))
+      mgr2.once('disconnect', (err, conn) => {
+        t.error(err)
+        t.ok(conn)
+        t.error(conn.lastError)
+      })
+      mgr1.once('disconnect', (err, conn) => {
+        t.error(err)
+        t.error(conn.lastError)
+        const replDrive = store2.feeds.find(f => f.key.equals(drive.key))
+        t.ok(replDrive, 'drive should have been replicated')
+        t.ok(replDrive.content, 'content should have been replicated')
+
+        t.equal(replDrive.version, 1, 'should also be on version 1')
+        debugger
+        replDrive.readFile('README.md', (err, res) => {
+          t.error(err)
+          debugger
+          message
+          t.end()
+        })
+      })
+      mgr1.handleConnection(mgr2.replicate())
+    })
+  })
 })
