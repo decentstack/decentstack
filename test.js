@@ -4,9 +4,10 @@ const hyperdrive = require('hyperdrive')
 const ram = require('random-access-memory')
 const ReplicationManager = require('./index')
 const ArrayStore = require('./examples/array-store.js')
+const corestore = require('./examples/replic8-corestore.js')
 
 test('The replic8 interface', t => {
-  t.plan(78)
+  t.plan(59)
   const encryptionKey = Buffer.alloc(32)
   encryptionKey.write('foo bars')
   const mgr = ReplicationManager(encryptionKey)
@@ -119,7 +120,8 @@ test('The replic8 interface', t => {
   }
 })
 
-test('Composite-core replication', t => {
+// Current hyperdrive is broken, i should experiment with the prerelease
+test.skip('Composite-core replication', t => {
   t.plan(11)
   const encryptionKey = Buffer.alloc(32)
   encryptionKey.write('foo bars')
@@ -162,6 +164,71 @@ test('Composite-core replication', t => {
         })
       })
       mgr1.handleConnection(mgr2.replicate())
+    })
+  })
+})
+
+test('Corestore wrapper', t => {
+  t.plan(13)
+  const encryptionKey = Buffer.alloc(32)
+  encryptionKey.write('foo bars')
+
+  const mgr1 = ReplicationManager(encryptionKey)
+  mgr1.once('error', t.error)
+
+  // init second core store and register with the first replication manager
+  const store1 = corestore(ram)
+  mgr1.use(store1)
+
+  const mgr2 = ReplicationManager(encryptionKey)
+  mgr2.once('error', t.error)
+
+  // init second core store and register with the second replication manager
+  const store2 = corestore(ram)
+  mgr2.use(store2)
+
+  const defCore = store1.default()
+  const otherCore = store1.get()
+
+  const msg1 = Buffer.from('This is the default core')
+  const msg2 = Buffer.from('This is another core')
+
+  mgr2.once('disconnect', (err, conn) => {
+    t.error(err)
+    t.ok(conn, 'mgr2 disconnected')
+    t.error(conn.lastError)
+
+    const replicatedDefCore = store2.get({ key: defCore.key })
+    t.ok(replicatedDefCore)
+    replicatedDefCore.get(0, (err, data) => {
+      t.error(err)
+      t.equals(msg1.toString(), data.toString(), 'Core1 and msg1 was replicated')
+
+      const replicatedOther = store2.get({ key: otherCore.key })
+      t.ok(replicatedOther)
+      replicatedOther.get(0, (err, data) => {
+        t.error(err)
+        t.equals(msg2.toString(), data.toString(), 'Core2 and msg2 was replicated')
+
+        mgr2.resolveFeed(otherCore.key, (err, alternativeCore) => {
+          t.error(err)
+          t.same(replicatedOther, alternativeCore)
+          t.end()
+        })
+      })
+    })
+  })
+
+  defCore.ready(() => {
+    defCore.append(msg1, err => {
+      t.error(err)
+      otherCore.ready(() => {
+        store1.get(otherCore.key)
+        otherCore.append(msg2, err => {
+          t.error(err)
+          mgr1.handleConnection(mgr2.replicate())
+        })
+      })
     })
   })
 })

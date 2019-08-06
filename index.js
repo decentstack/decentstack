@@ -65,6 +65,7 @@ class Replic8 extends EventEmitter {
 
   resolveFeed (key, namespace = 'default', cb) {
     if (typeof namespace === 'function') return this.resolveFeed(key, undefined, namespace)
+    assert.strict.equal(typeof cb, 'function', 'Callback missing!')
 
     if (Buffer.isBuffer(key)) key = key.hexSlice()
 

@@ -19,6 +19,7 @@
     "protocol-buffers-encodings": "^1.1.0"
   },
   "devDependencies": {
+    "corestore": "^2.0.0",
     "hyperdrive": "^9.16.0",
     "protocol-buffers": "^4.1.0",
     "random-access-memory": "^3.1.1",

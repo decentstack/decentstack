@@ -266,6 +266,16 @@ core-util-is@~1.0.0:
   resolved "https://registry.yarnpkg.com/core-util-is/-/core-util-is-1.0.2.tgz#b5fd54220aa2bc5ab57aab7140c940754503c1a7"
   integrity sha1-tf1UIgqivFq1eqtxQMlAdUUDwac=
 
+corestore@^2.0.0:
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/corestore/-/corestore-2.0.0.tgz#30e9a3fb8572405bee0792c902585ec31fd8fc58"
+  integrity sha512-KcVd385RQna+dNgcPmWPAbMw4h9g4IoITfggvcHm7XOREvraFAwKv6LdnB1pIcSSwCh+UNoaUpPRIkycYgyjlA==
+  dependencies:
+    dat-encoding "^5.0.1"
+    hypercore "^7.2.2"
+    hypercore-crypto "^1.0.0"
+    hypercore-protocol "^6.11.0"
+
 count-trailing-zeros@^1.0.1:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/count-trailing-zeros/-/count-trailing-zeros-1.0.1.tgz#aba6c5833be410d45b1eca3e6d583844ce682c77"
@@ -281,6 +291,13 @@ cross-spawn@^6.0.5:
     semver "^5.5.0"
     shebang-command "^1.2.0"
     which "^1.2.9"
+
+dat-encoding@^5.0.1:
+  version "5.0.1"
+  resolved "https://registry.yarnpkg.com/dat-encoding/-/dat-encoding-5.0.1.tgz#8d835c67bc3a0df831fc10eaee2e2a1ffe6a4871"
+  integrity sha512-PET9PlGt6ejgqU07hbPLx3tP2siDMMFumUe+xwmm4+5W+0cOlpzreCPoMVUBzxWeR4sPdxL+AS53odQTBtzEqA==
+  dependencies:
+    safe-buffer "^5.0.1"
 
 debug-log@^1.0.0:
   version "1.0.1"
@@ -789,7 +806,7 @@ hypercore-crypto@^1.0.0:
     sodium-universal "^2.0.0"
     uint64be "^2.0.2"
 
-hypercore-protocol@^6.11.1, hypercore-protocol@^6.4.1:
+hypercore-protocol@^6.11.0, hypercore-protocol@^6.11.1, hypercore-protocol@^6.4.1:
   version "6.11.1"
   resolved "https://registry.yarnpkg.com/hypercore-protocol/-/hypercore-protocol-6.11.1.tgz#34fb9afe494f9b67207503e19448637f27f532c9"
   integrity sha512-4vyYGzSTRCfpIPnpYO/WN0VeS2oGeIrzCCwIXfz5TL2dyyHu7wF5xiigNuUfTn9n3cTOwwbH+EKsygTNsO2yfw==
@@ -803,7 +820,7 @@ hypercore-protocol@^6.11.1, hypercore-protocol@^6.4.1:
     sorted-indexof "^1.0.0"
     varint "^5.0.0"
 
-hypercore@^7.5.0, hypercore@^7.5.1:
+hypercore@^7.2.2, hypercore@^7.5.0, hypercore@^7.5.1:
   version "7.5.1"
   resolved "https://registry.yarnpkg.com/hypercore/-/hypercore-7.5.1.tgz#d86c732454e7e918881faf8c826155d680b34c12"
   integrity sha512-tgololYj3O6Y0Mg6PK7EJntRu+auKSYuER2a8pVetPqnDSJ1RfAVlyVr3VmuS5W9hS0PwH4OXl4R/uVfkuNNoQ==
@@ -1632,6 +1649,11 @@ rxjs@^5.5.2:
   integrity sha512-xx2itnL5sBbqeeiVgNPVuQQ1nC8Jp2WfNJhXWHmElW9YmrpS9UVnNzhP3EH3HFqexO5Tlp8GhYY+WEcqcVMvGw==
   dependencies:
     symbol-observable "1.0.1"
+
+safe-buffer@^5.0.1:
+  version "5.2.0"
+  resolved "https://registry.yarnpkg.com/safe-buffer/-/safe-buffer-5.2.0.tgz#b74daec49b1148f88c64b68d49b1e815c1f2f519"
+  integrity sha512-fZEwUGbVl7kouZs1jCdMLdt95hdIv0ZeHg6L7qPeciMZhZ+/gdesW4wgTARkrFWEpspjEATAzUGPG8N2jJiwbg==
 
 safe-buffer@~5.1.0, safe-buffer@~5.1.1:
   version "5.1.2"
