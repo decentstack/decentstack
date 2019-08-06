@@ -1,5 +1,25 @@
-const corestore = require('corestore')
+/* corestore-replic8.js
+ *
+ * Creates corestore instances that
+ * implements the middleware interface
+ *
+ * Usage:
+ * // Initialize corestore through wrapper
+ * const corestore = require('corestore-replic8')
+ *
+ * const store = corestore(randomAccess)
+ * // Register it with the manager
+ * mgr.use(store)
+ *
+ * // operate as usual
+ * const core1 = store.default()
+ * const core2 = store.get()
+ *
+ * // but replicate through manager instead of store.
+ * const stream = mgr.replicate()
+ */
 
+const corestore = require('corestore')
 module.exports = (...args) => {
   const store = corestore(...args)
 

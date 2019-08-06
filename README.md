@@ -15,7 +15,7 @@ This is an working alpha, feedback and testing is highly appreciated!
 - [x] Implement middleware interface
 - [x] Realtime feed forwards
 - [x] Provide backwards compatibility with multifeed ([patch available!](https://github.com/telamon/multifeed/tree/feature/replic8-compat))
-- [x] Provide [corestore middleware wrapper](./examples/replic8-corestore.js)
+- [x] Provide corestore support through [middleware wrapper](./examples/replic8-corestore.js)
 - [ ] Solve expectedFeeds issue to renable composite-core support.
 - [ ] Provide connection statistics (transfer rate / transfered bytes / latency)
 - [ ] Test and document `unshare` operation
