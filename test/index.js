@@ -2,9 +2,9 @@ const test = require('tape')
 const hypercore = require('hypercore')
 const hyperdrive = require('hyperdrive')
 const ram = require('random-access-memory')
-const ReplicationManager = require('./index')
-const ArrayStore = require('./examples/array-store.js')
-const corestore = require('./examples/replic8-corestore.js')
+const ReplicationManager = require('..')
+const ArrayStore = require('../examples/array-store.js')
+const corestore = require('../examples/replic8-corestore.js')
 
 test('The replic8 interface', t => {
   t.plan(59)
@@ -120,7 +120,11 @@ test('The replic8 interface', t => {
   }
 })
 
-// Current hyperdrive is broken, i should experiment with the prerelease
+// Current hyperdrive is broken when it comes to reporting
+// the sub-core, i should experiment with the prerelease.
+// Update! Prelease using core-store has even less compatible replication.
+// I'll try and submit a PR to andrewosh/corestore rewriting the .replicate()
+// function into a non stream hogging version.
 test.skip('Composite-core replication', t => {
   t.plan(11)
   const encryptionKey = Buffer.alloc(32)

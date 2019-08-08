@@ -30,3 +30,14 @@ message RequestReplicate {
   repeated bytes keys = 2;
   uint32 manifest_id = 3;
 }
+
+
+
+// TODO: move to separate 'substream' module
+message SubstreamOp {
+  required uint32 op = 1;
+  required bytes id = 2;
+  bytes data = 3;
+}
+
+

@@ -7,8 +7,8 @@
   "license": "MIT",
   "private": false,
   "scripts": {
-    "test": "tape test.js",
-    "debug": "node inspect $(npm bin)/tape test.js",
+    "test": "tape test/*",
+    "debug": "node inspect $(npm bin)/tape test/*",
     "protobuf": "$(npm bin)/protocol-buffers -o lib/messages.js schema.proto",
     "lint": "standard"
   },
@@ -20,7 +20,7 @@
   },
   "devDependencies": {
     "corestore": "^2.0.0",
-    "hyperdrive": "^9.16.0",
+    "hyperdrive": "^10.0.0",
     "protocol-buffers": "^4.1.0",
     "random-access-memory": "^3.1.1",
     "standard": "^12.0.1",
