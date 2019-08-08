@@ -5,7 +5,7 @@ const pump = require('pump')
 const eos = require('end-of-stream')
 
 test.only('virtual channels', t => {
-  t.plan(14)
+  t.plan(26)
   const key = Buffer.alloc(32)
   key.write('encryption secret')
 
@@ -41,15 +41,12 @@ test.only('virtual channels', t => {
     t.end()
   })
 
-  let pending = 4
+  let pending = 2
   const finish = () => {
     if (--pending) return
     t.equal(stream1.destroyed, false)
     t.equal(stream2.destroyed, false)
-    stream1.once('drain', () => {
-      debugger
-      stream1.end()
-    })
+    stream1.end()
   }
 
   subA1.once('data', chunk => {
