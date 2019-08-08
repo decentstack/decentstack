@@ -4,7 +4,7 @@ const substream = require('../lib/hypercore-protocol-substream')
 const pump = require('pump')
 const eos = require('end-of-stream')
 
-test.only('virtual channels', t => {
+test('virtual channels', t => {
   t.plan(23)
   const key = Buffer.alloc(32)
   key.write('encryption secret')

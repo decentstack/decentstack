@@ -3,7 +3,7 @@ const assert = require('assert')
 const debug = require('debug')('replic8')
 const { isCore, isKey, assertCore, hexkey } = require('./lib/util')
 const PeerConnection = require('./lib/peer-connection.js')
-
+const substream = require('./lib/hypercore-protocol-substream')
 const {
   EXCHANGE,
   PROTOCOL_VERSION,
@@ -21,7 +21,7 @@ class Replic8 extends EventEmitter {
     this.protocolOpts = opts || {}
     this._middleware = {}
     this.connections = []
-    this.extensions = [EXCHANGE]
+    this.extensions = [EXCHANGE, substream.EXTENSION]
     if (Array.isArray(opts.extensions)) this.extensions = [this.extensions, opts.extensions].sort()
 
     this._onConnectionStateChanged = this._onConnectionStateChanged.bind(this)
