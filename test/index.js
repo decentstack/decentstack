@@ -3,8 +3,12 @@ const hypercore = require('hypercore')
 const hyperdrive = require('hyperdrive')
 const ram = require('random-access-memory')
 const ReplicationManager = require('..')
-const ArrayStore = require('../examples/array-store.js')
-const corestore = require('../examples/replic8-corestore.js')
+
+// examples
+const ArrayStore = require('../examples/array-store')
+const corestore = require('../examples/replic8-corestore')
+const typedecorator = require('../examples/type-decorator')
+const { encodeHeader } = typedecorator
 
 test('The replic8 interface', t => {
   t.plan(59)
@@ -237,8 +241,56 @@ test('Corestore wrapper', t => {
   })
 })
 
+test('Core type decorator', t => {
+  t.plan(3)
+  const composite = corestore(ram)
+  const core = hypercore(ram)
+  const store1 = new ArrayStore(ram, hypercore, [
+    core,
+    hyperdrive(ram),
+    composite
+    // hypertrie(ram)
+  ])
+  const expectedTypes = [
+    'hypertrie',
+    'CabalFeed:7.0.0',
+    undefined
+  ]
 
-test.skip('Core type decorator', t => {
-  
+  const encryptionKey = Buffer.alloc(32)
+  encryptionKey.write('types are useful')
+
+  const mgr1 = ReplicationManager(encryptionKey)
+  mgr1.once('error', t.error)
+
+  const mgr2 = ReplicationManager(encryptionKey)
+  mgr2.once('error', t.error)
+
+  mgr1.use(typedecorator)
+  mgr1.use(store1)
+
+  let tn = 0
+  mgr2.use({
+    accept ({ key, meta, resolve }, next) {
+      t.equal(meta.headerType, expectedTypes[tn++])
+      next()
+    }
+  })
+
+  core.ready(() => {
+    const coreMeta = Buffer.from(JSON.stringify({
+      passportId: '045B4203EDF92',
+      signature: '92FDe3024B540'
+    }))
+    const binhdr = encodeHeader('CabalFeed:7.0.0', coreMeta)
+
+    core.append(binhdr, err => {
+      t.error(err)
+      const conn = mgr1.handleConnection(mgr2.replicate())
+      conn.once('end', err => {
+        t.error(err)
+        t.end()
+      })
+    })
+  })
 })
-

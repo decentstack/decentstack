@@ -160,7 +160,6 @@ class Replic8 extends EventEmitter {
     })
   }
 
-
   /** Queries middleware for keys and meta data
    * and combines it into a transferable manifest.
    * optionally you can provide the `keys` argument

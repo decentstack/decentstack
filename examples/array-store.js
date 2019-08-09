@@ -67,9 +67,15 @@ class ArrayStore extends EventEmitter {
 
   // waits for all feeds to be ready (sorry for awesomesauce)
   readyFeeds (cb) {
-    const s = [...this.feeds]
-    const p = n => !s[n] ? cb(s) : s[n].ready(() => p(++n))
-    p(0)
+    const snapshot = [...this.feeds]
+    let pending = snapshot.length
+    snapshot.forEach(feed => {
+      if (typeof feed.ready === 'function') {
+        feed.ready(() => {
+          if (!--pending) cb(snapshot)
+        })
+      } else if (!--pending) cb(snapshot)
+    })
   }
 }
 

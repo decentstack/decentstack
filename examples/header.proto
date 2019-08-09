@@ -1,0 +1,6 @@
+syntax = "proto3";
+// https://www.datprotocol.com/deps/0007-hypercore-header/
+message HypercoreHeader {
+  required string type = 1;
+  bytes metadata = 2;
+}
