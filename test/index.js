@@ -11,7 +11,7 @@ const typedecorator = require('../examples/type-decorator')
 const { encodeHeader } = typedecorator
 
 test('The replic8 interface', t => {
-  t.plan(59)
+  t.plan(91)
   const encryptionKey = Buffer.alloc(32)
   encryptionKey.write('foo bars')
   const mgr = ReplicationManager(encryptionKey)
@@ -119,7 +119,7 @@ test('The replic8 interface', t => {
 
     t.equal(announceInvokes, 1, 'Announce was invoked once')
     t.equal(acceptInvokes, 1, 'Accept invoked once')
-    t.equal(resolveInvokes, 6, 'Resolve invoked 6 times')
+    t.equal(resolveInvokes, 10, 'Resolve invoked 10 times')
     t.end()
   }
 })
@@ -293,4 +293,63 @@ test('Core type decorator', t => {
       })
     })
   })
+})
+
+test('regression: announce new feed on existing connections', t => {
+  t.plan(9)
+  setup('one', p1 => {
+    setup('two', p2 => {
+      setup('three', p3 => {
+        let feedsReplicated = 0
+        let conn1 = null
+        let conn2 = null
+        p1.store.on('feed', feed => {
+          feed.get(0, (err, data) => {
+            t.error(err)
+            switch (feedsReplicated++) {
+              case 0:
+                const f2 = p2.store.feeds[0]
+                t.equal(feed.key.toString('hex'), f2.key.toString('hex'), 'should see m2\'s writer')
+                t.equals(data.toString(), 'two', 'm2\'s writer should have been replicated')
+                break
+              case 1:
+                const f3 = p3.store.feeds[0]
+                t.equal(feed.key.toString('hex'), f3.key.toString('hex'), 'should see m3\'s writer')
+                t.equals(data.toString(), 'three', 'm3\'s writer should have been forwarded via m2')
+                conn1.stream.end()
+                conn2.stream.end()
+                t.end()
+                break
+              default:
+                t.ok(false, 'Only expected to see 2 feed events, got: ' + feedsReplicated)
+            }
+          })
+        })
+
+        // mgr1 and mgr2 are now live connected.
+        conn1 = p1.mgr.handleConnection(p2.mgr.replicate())
+
+        // When m3 is attached to m2, m2 should forward m3's writer to m1.
+        conn2 = p3.mgr.handleConnection(p2.mgr.replicate())
+      })
+    })
+  })
+
+  function setup (msg, cb) {
+    const encryptionKey = Buffer.alloc(32)
+    encryptionKey.write('forwarding is good')
+    const mgr = ReplicationManager(encryptionKey, { live: true })
+    mgr.once('error', t.error)
+    const store = new ArrayStore(ram, hypercore, 1)
+    mgr.use(store)
+    const feed = store.feeds[0]
+    const ret = { mgr, store, feed }
+    feed.ready(() => {
+      feed.append(msg, err => {
+        t.error(err)
+        cb(ret)
+      })
+    })
+    return ret
+  }
 })
