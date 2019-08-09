@@ -3,7 +3,7 @@ const assert = require('assert')
 const debug = require('debug')('replic8')
 const { isCore, isKey, assertCore, hexkey } = require('./lib/util')
 const PeerConnection = require('./lib/peer-connection.js')
-const substream = require('./lib/hypercore-protocol-substream')
+const substream = require('hypercore-protocol-substream')
 const {
   EXCHANGE,
   PROTOCOL_VERSION,

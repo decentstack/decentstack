@@ -16,7 +16,7 @@ This is an working alpha, feedback and testing is highly appreciated!
 - [x] Realtime feed forwards
 - [x] Provide backwards compatibility with multifeed ([patch available!](https://github.com/telamon/multifeed/tree/feature/replic8-compat))
 - [x] Provide corestore support through [middleware wrapper](./examples/replic8-corestore.js)
-- [x] Solve expectedFeeds issue to renable composite-core support. ([substreams!](./lib/hypercore-protocol-substream.js))
+- [x] Solve expectedFeeds issue to renable composite-core support. ([substreams!](https://github.com/telamon/hypercore-protocol-substream.git))
 - [ ] Expose peer-substreams through API to applications/middleware.
 - [ ] Provide connection statistics (transfer rate / transfered bytes / latency)
 - [ ] Test and document `unshare` operation

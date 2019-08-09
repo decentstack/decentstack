@@ -319,6 +319,13 @@ debug@^3.1.0:
   dependencies:
     ms "^2.1.1"
 
+debug@^4.1.1:
+  version "4.1.1"
+  resolved "https://registry.yarnpkg.com/debug/-/debug-4.1.1.tgz#3b72260255109c6b589cee050f1d516139664791"
+  integrity sha512-pYAIzeRo8J6KPEaJ0VWOh5Pzkbw/RetuzehGM7QRRX5he4fPHx2rdKMB256ehJCkX+XRQm16eZLqLNS8RSZXZw==
+  dependencies:
+    ms "^2.1.1"
+
 deep-equal@~1.0.1:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/deep-equal/-/deep-equal-1.0.1.tgz#f5d260292b660e084eff4cdbc9f08ad3247448b5"
@@ -819,10 +826,33 @@ hypercore-crypto@^1.0.0:
     sodium-universal "^2.0.0"
     uint64be "^2.0.2"
 
+hypercore-protocol-substream@^1.0.0:
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/hypercore-protocol-substream/-/hypercore-protocol-substream-1.0.0.tgz#fc56ae29785514c8a19275fcad3ac5adf65902b3"
+  integrity sha512-7q295cmMu4cUQxWNGJaSbYt8qS76nEMxgCP4zGM1SEGuFHXCVAix4vPqWfqCI/nCxJ9pBJEIoEM5xP+8G0pKAA==
+  dependencies:
+    debug "^4.1.1"
+    hypercore-protocol "^6.12.0"
+    protocol-buffers-encodings "^1.1.0"
+
 hypercore-protocol@^6.11.0, hypercore-protocol@^6.11.1, hypercore-protocol@^6.4.1:
   version "6.11.1"
   resolved "https://registry.yarnpkg.com/hypercore-protocol/-/hypercore-protocol-6.11.1.tgz#34fb9afe494f9b67207503e19448637f27f532c9"
   integrity sha512-4vyYGzSTRCfpIPnpYO/WN0VeS2oGeIrzCCwIXfz5TL2dyyHu7wF5xiigNuUfTn9n3cTOwwbH+EKsygTNsO2yfw==
+  dependencies:
+    buffer-alloc-unsafe "^1.0.0"
+    buffer-from "^1.0.0"
+    inherits "^2.0.3"
+    protocol-buffers-encodings "^1.1.0"
+    readable-stream "^2.2.6"
+    sodium-universal "^2.0.0"
+    sorted-indexof "^1.0.0"
+    varint "^5.0.0"
+
+hypercore-protocol@^6.12.0:
+  version "6.12.0"
+  resolved "https://registry.yarnpkg.com/hypercore-protocol/-/hypercore-protocol-6.12.0.tgz#0fafa7c047a7e4c35b2d77639e2489f60d7b1a0d"
+  integrity sha512-T3oy9/7QFejqJX2RGcCUU1944e5/eKbLlSz9JPTNN1QbYFJgat/r7eTyOO8SMSLUimUmQx6YBMKhgYbdKzp7Bw==
   dependencies:
     buffer-alloc-unsafe "^1.0.0"
     buffer-from "^1.0.0"
