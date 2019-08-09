@@ -4,24 +4,22 @@ const { EventEmitter } = require('events')
 // an array to keep track of cores
 
 class ArrayStore extends EventEmitter {
-  constructor (storage, factory, generateNFeeds) {
+  constructor (storage, factory, feeds) {
     super()
     this.storage = storage
     this.factory = factory
     this.feeds = []
 
+    if (typeof feeds === 'number') {
+      feeds = Array.from(new Array(feeds))
+        .map(i => this.factory(this.storage))
+    }
+
     // Generate some test-feeds
-    if (generateNFeeds) {
-      for (let i = 0; i < generateNFeeds; i++) {
-        const feed = this.factory(this.storage)
+    if (Array.isArray(feeds)) {
+      for (let feed of feeds) {
         this.feeds.push(feed)
         this.emit('feed', feed)
-        /* not hyperdrive compatible
-        feed.ready(() => {
-          feed.append(`Generated #${i}`, err => {
-            if (err) throw err
-          })
-        })*/
       }
     }
   }

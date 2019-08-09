@@ -236,3 +236,9 @@ test('Corestore wrapper', t => {
     })
   })
 })
+
+
+test.skip('Core type decorator', t => {
+  
+})
+
