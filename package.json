@@ -9,6 +9,7 @@
   "scripts": {
     "test": "tape test/*",
     "debug": "node inspect $(npm bin)/tape test/*",
+    "bail": "npm test | tap-bail",
     "protobuf": "$(npm bin)/protocol-buffers -o lib/messages.js schema.proto",
     "lint": "standard"
   },
@@ -16,7 +17,7 @@
     "end-of-stream": "^1.4.1",
     "hypercore": "^7.5.1",
     "hypercore-protocol": "^6.11.1",
-    "hypercore-protocol-substream": "^1.0.0",
+    "hypercore-protocol-substream": "^2.0.2",
     "protocol-buffers-encodings": "^1.1.0"
   },
   "devDependencies": {
@@ -25,6 +26,7 @@
     "protocol-buffers": "^4.1.0",
     "random-access-memory": "^3.1.1",
     "standard": "^12.0.1",
+    "tap-bail": "^1.0.0",
     "tap-spec": "^5.0.0",
     "tap-stream": "^0.2.0",
     "tape": "^4.10.2",

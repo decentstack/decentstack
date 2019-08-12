@@ -10,7 +10,7 @@ const corestore = require('../examples/replic8-corestore')
 const typedecorator = require('../examples/type-decorator')
 const { encodeHeader } = typedecorator
 
-test('The replic8 interface', t => {
+test.only('The replic8 interface', t => {
   t.plan(91)
   const encryptionKey = Buffer.alloc(32)
   encryptionKey.write('foo bars')
@@ -129,7 +129,7 @@ test('The replic8 interface', t => {
 // Update! Prelease using core-store has even less compatible replication.
 // I'll try and submit a PR to andrewosh/corestore rewriting the .replicate()
 // function into a non stream hogging version.
-test.skip('Composite-core replication', t => {
+test('Composite-core replication', t => {
   t.plan(11)
   const encryptionKey = Buffer.alloc(32)
   encryptionKey.write('foo bars')
