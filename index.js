@@ -38,6 +38,9 @@ class Replic8 extends EventEmitter {
     if (typeof namespace !== 'string') return this.use('default', namespace)
     if (!this._middleware[namespace]) this._middleware[namespace] = []
     this._middleware[namespace].push(app)
+    // hook, let applications know when they we're added to a manager,
+    // give them a chance to register sub-middleware if needed
+    if (typeof app.__on_use === 'function') app.__on_use(this, namespace)
   }
 
   // TODO:
