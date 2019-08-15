@@ -87,7 +87,7 @@ const app = {
 
   // Optional hook that will be invoked when
   // this middleware gets appended to a replication stack
-  __on_use(manager, namespace) {
+  _on_use(manager, namespace) {
     // exposes possiblity to attach
     // internal/nested middleware
     manager.use(namespace, this.multifeed)
