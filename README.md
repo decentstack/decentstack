@@ -231,8 +231,7 @@ const cabl = Cabal(ram, null, {replicate: mgr})
 
 ## A note on stack-order
 
-> TLDR;
->
+**TLDR;**
 > `resolve` and `accept` = First to Last
 >
 > `share` and `decorate` = Last to First
@@ -250,14 +249,9 @@ This is to make it easier writing useful middleware,
 Filters should have their `share` invoked last to process a complete list of
 locally available feeds, and should receive first priority on `accept`.
 
-Stores should have their 'share' invoked first since they provide the lists of
-available feeds, and their 'accept' last so that any feeds that reach it must have passed the filters, also they must honor the rule:
+Stores should have their `share` invoked first since they provide the lists of
+available feeds, and their `accept` last so that any feeds that reach it must have passed the filters, also they must honor the rule:
 "last `accept` callback in the stack instantiates a feed locally if missing".
-
-Thus it is recommended to have your core stores be appended last (last `accept`
-instantiates a feed locally if missing).
-And your filters should be put in the beginning of the stack
-so they can process complete sets of feeds/meta.
 
 ```asciiart
       ( TRANSMITTER )                                ( RECEIVER )
