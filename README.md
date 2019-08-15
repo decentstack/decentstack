@@ -258,10 +258,10 @@ available feeds, and their `accept` last so that any feeds that reach it must ha
       ( TRANSMITTER )                                ( RECEIVER )
     -----------------------> ---------------> -------------> ------->  FIFO
    ^   _____________                                 _____________   |
-0  |  [ FilterA     ]  <- SHARE     |    ACCEPT ->  [ Filter B    ]  |  0
+0  |  [ FilterA     ]  <- DESCRIBE  |    ACCEPT ->  [ Filter B    ]  |  0
    |   -------------                |                -------------   v
 1  |  [ Application ]  <- (any)     |    ACCEPT ->  [ Filter A    ]  |  1
-   ^   -------------                |                -------------   |
+   ^   -------------                                -------------   |
 2  |  [ Decorator   ]  <- DESCRIBE  |    ACCEPT ->  [ Store       ]  |  2
    |   -------------                |                -------------   |
 3  |  [ Store       ]  <- SHARE     |                                v

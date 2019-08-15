@@ -351,7 +351,8 @@ class Replic8 extends EventEmitter {
 
         app.accept(ctx, (err, accepted) => {
           if (err) return next(err)
-          next(null, accepted && key, accepted)
+          if (accepted === false) next(null, false, true) // tristate..
+          else next(null, accepted && key, accepted)      // tristate..
         })
       }, (err, accepted) => {
         if (err) conn.kill(err)
