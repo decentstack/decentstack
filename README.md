@@ -251,7 +251,8 @@ locally available feeds, and should receive first priority on `accept`.
 
 Stores should have their `share` invoked first since they provide the lists of
 available feeds, and their `accept` last so that any feeds that reach it must have passed the filters, also they must honor the rule:
-"last `accept` callback in the stack instantiates a feed locally if missing".
+
+> ``last `accept` callback in the stack instantiates the feed locally if desired and missing.''
 
 ```asciiart
       ( TRANSMITTER )                                ( RECEIVER )
