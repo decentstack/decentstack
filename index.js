@@ -259,9 +259,15 @@ class Replic8 extends EventEmitter {
 
             const reqTime = (new Date()).getTime()
             conn.sendManifest(ns, manifest, (err, selectedFeeds) => {
-              if (err) return conn.kill(err)
-              const resTime = (new Date()).getTime() - reqTime
-              debug(`Remote response (${resTime}ms) selected:`, selectedFeeds.map(key => key.hexSlice(0, 6)))
+              // Getting requests for all automatically sent manifests is not
+              // mandatory in this stage, we're only using this callback for statistics.
+              if (err && err.type !== 'ManifestResponseTimedOutError') return conn.kill(err)
+              else if (!err) {
+                const resTime = (new Date()).getTime() - reqTime
+                debug(`Remote response (${resTime}ms) selected:`, selectedFeeds.map(key => key.hexSlice(0, 6)))
+              } else {
+                console.warn(`Remote ignored our manifest for namespace "${ns}"`)
+              }
             })
           })
         })
@@ -313,6 +319,11 @@ class Replic8 extends EventEmitter {
   }
 
   _onManifestReceived ({ id, namespace, keys, headers }, conn) {
+    if (!this._middleware[namespace]) {
+
+      return console.warn(`Received manifest for unknown namespace "${namespace}"`)
+    }
+
     let pending = keys.length
     const selected = []
     // TODO: operates on single accept(key) at a time for the sake
@@ -356,8 +367,14 @@ class Replic8 extends EventEmitter {
   // Resolve and replicate
   _onReplicateRequest ({ keys, namespace }, conn) {
     keys.forEach(key => {
+      if (conn.isActive(key)) return
       this.resolveFeed(key, namespace, (err, feed) => {
         if (err) return conn.kill(err)
+        // Both local initiative and remote request race
+        // to saturate the stream with desired feeds.
+        // Thus check one more time if the feed is already
+        // joined to avoid killing the stream in vain.
+        if (conn.isActive(key)) return
         conn.joinFeed(feed, err => {
           if (err) return conn.kill(err)
         })
