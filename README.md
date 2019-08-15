@@ -231,6 +231,13 @@ const cabl = Cabal(ram, null, {replicate: mgr})
 
 ## A note on stack-order
 
+> TLDR;
+>
+> `resolve` and `accept` = First to Last
+>
+> `share` and `decorate` = Last to First
+
+
 Middleware traversal order depends on the direction of communication.
 
 When sending data from local to remote, middleware stack is traversed in LIFO
@@ -266,8 +273,6 @@ so they can process complete sets of feeds/meta.
    |   -------------
   LIFO
 ```
-
-
 
 ## API
 
