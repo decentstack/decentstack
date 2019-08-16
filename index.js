@@ -49,16 +49,15 @@ class Replic8 extends EventEmitter {
   //    const sess = handleConnection(net.createTcpStream(peer.addres, peer.port), peerInfo)
   // }
 
-  handleConnection (stream, peerInfo = null) {
-    const conn = this._newExchangeStream()
+  handleConnection (stream, opts = {}, peerInfo = null) {
+    const conn = this._newExchangeStream(opts)
     conn.peerInfo = peerInfo
     stream.pipe(conn.stream).pipe(stream)
-
     return conn
   }
 
   replicate (opts = {}) {
-    if (opts.stream) return this.handleConnection(opts.stream)
+    if (opts.stream) return this.handleConnection(opts.stream, opts)
     else return this._newExchangeStream(opts).stream
   }
 
