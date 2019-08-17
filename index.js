@@ -34,10 +34,15 @@ class Replic8 extends EventEmitter {
     return this.encryptionKey
   }
 
-  use (namespace, app) {
+  prepend (namespace, app) {
+    return this.use(namespace, app, true)
+  }
+
+  use (namespace, app, prepend = false) {
     if (typeof namespace !== 'string') return this.use('default', namespace)
     if (!this._middleware[namespace]) this._middleware[namespace] = []
-    this._middleware[namespace].push(app)
+    if (prepend) this._middleware[namespace].unshift(app)
+    else this._middleware[namespace].push(app)
     // hook, let applications know when they we're added to a manager,
     // give them a chance to register sub-middleware if needed
     if (typeof app._on_use === 'function') app._on_use(this, namespace)

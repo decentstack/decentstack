@@ -89,7 +89,7 @@ test.only('The replic8 interface', t => {
     t.error(conn.lastError, 'No errors on remote conn state')
 
     if (imLast) finishUp()
-    else imLast = true
+    else imLast = 'local'
   })
 
   mgr.once('connection', conn => t.ok(conn, '"connection" event fired on local'))
@@ -100,7 +100,7 @@ test.only('The replic8 interface', t => {
     t.error(conn.lastError, 'No errors on local conn state')
 
     if (imLast) finishUp()
-    else imLast = true
+    else imLast = 'remote'
   })
 
   // Initialize a resverse stream
