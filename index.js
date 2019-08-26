@@ -17,13 +17,22 @@ const UNSHARED = '__UNSHARED__'
 class Replic8 extends EventEmitter {
   constructor (encryptionKey, opts = {}) {
     super()
+    if (typeof encryptionKey === 'string') encryptionKey = Buffer.from(encryptionKey, 'hex')
     this.encryptionKey = encryptionKey
     this.protocolOpts = opts || {}
+    // lift our own opts
+    this.opts = {
+      initiate: opts.initiate
+    }
+    this.extensions = [EXCHANGE, substream.EXTENSION]
+    if (Array.isArray(opts.extensions)) this.extensions = [...this.extensions, ...opts.extensions].sort()
+
+    // don't pollute hypercore-protocol opts
+    delete this.protocolOpts.extensions
+    delete this.protocolOpts.initiate
+
     this._middleware = {}
     this.connections = []
-    this.extensions = [EXCHANGE, substream.EXTENSION]
-    if (Array.isArray(opts.extensions)) this.extensions = [this.extensions, opts.extensions].sort()
-
     this._onConnectionStateChanged = this._onConnectionStateChanged.bind(this)
     this._onManifestReceived = this._onManifestReceived.bind(this)
     this._onReplicateRequest = this._onReplicateRequest.bind(this)
@@ -45,7 +54,26 @@ class Replic8 extends EventEmitter {
     else this._middleware[namespace].push(app)
     // hook, let applications know when they we're added to a manager,
     // give them a chance to register sub-middleware if needed
-    if (typeof app._on_use === 'function') app._on_use(this, namespace)
+    if (typeof app.mounted === 'function') app.mounted(this, namespace)
+
+    // TODO: This is a complicated mechanism, attempting to manipulate the stack after the
+    // first connection was established should throw errors.
+    // Because it's not only a new manifest that has to be regerenated, we also
+    // need to run all remote-offers through our new stack, which would force us
+    // to keep the last-remote-manifest cached on each connection..
+    // leaving this sourcecode here for future references.
+    /*
+     *
+    // Our stack changed, resend manifest to existing peers if any
+    if (this.connections.length) {
+      this.connections.forEach(conn => {
+        this.startConversation(conn, err => {
+          // Error indicates faulty middleware
+          if (err && err.type !== 'ManifestResponseTimedOutError') return conn.kill(err)
+        })
+      })
+    }
+    */
   }
 
   // TODO:
@@ -214,6 +242,66 @@ class Replic8 extends EventEmitter {
       this.collectShares(namespace, assembleManifest)
     }
   }
+
+  /**
+   * send a manifest containing available feeds to provided
+   * peer connection.
+   * cb(error, selectedFeeds),
+   * error - either an application error or 'ManifestResponseTimedOutError'
+   * which indicates that the peer did not respond or was not interested
+   * in our offer.
+   */
+  startConversation (conn, cb) {
+    assert(typeof cb === 'function', 'callback must be a function')
+    let pending = this.namespaces.length
+    let selected = {}
+    this.namespaces.forEach(ns => {
+      this.collectManifest(ns, (err, manifest) => {
+        // this is an indicator of faulty middleware
+        // maybe even kill the process?
+        if (err) {
+          pending = -1
+          return cb(err)
+        }
+
+        if (!manifest) return cb() // empty manifest, return
+
+        conn.sendManifest(ns, manifest, (err, selectedFeeds) => {
+          if (err) {
+            pending = -1
+            cb(err)
+          }
+          selected[ns] = selectedFeeds
+          if (!--pending) cb(null, selected)
+        })
+      })
+    })
+  }
+
+  /**
+   * Tell the manager to drop all connections and
+   * notify all middleware in the stack this manager is
+   * destined for the garbage collector.
+   * Might want to add an optional callback to properly
+   * notify invoker
+   */
+  destroy (err) {
+    for (const conn of this.connections) {
+      conn.kill(err)
+    }
+
+    for (const ns of this.namespaces) {
+      const snapshot = [...this._middleware[ns]]
+      for (const ware of snapshot) {
+        // notify subscribing middleware
+        if (typeof ware._on_destroy === 'function') {
+          ware._on_destroy(err)
+        }
+        // remove middlware from the stack
+        this._middleware[ns].splice(this._middleware[ns].indexOf(ware), 1)
+      }
+    }
+  }
   // ----------- Internal API --------------
 
   // Create an exchange stream
@@ -250,31 +338,25 @@ class Replic8 extends EventEmitter {
     conn.on('feed', this._onFeedReplicated)
     return conn
   }
-
   _onConnectionStateChanged (state, prev, err, conn) {
     switch (state) {
       case STATE_ACTIVE:
-        this.namespaces.forEach(ns => {
-          this.collectManifest(ns, (err, manifest) => {
-            // this is an indicator of faulty middleware
-            // maybe even kill the process?
-            if (err) return conn.kill(err)
-            if (!manifest) return
-
-            const reqTime = (new Date()).getTime()
-            conn.sendManifest(ns, manifest, (err, selectedFeeds) => {
-              // Getting requests for all automatically sent manifests is not
-              // mandatory in this stage, we're only using this callback for statistics.
-              if (err && err.type !== 'ManifestResponseTimedOutError') return conn.kill(err)
-              else if (!err) {
-                const resTime = (new Date()).getTime() - reqTime
-                debug(`Remote response (${resTime}ms) selected:`, selectedFeeds.map(key => key.hexSlice(0, 6)))
-              } else {
-                console.warn(`Remote ignored our manifest for namespace "${ns}"`)
-              }
-            })
+        // Check if manual conversation initiation requested
+        if (this.opts.initiate !== false) {
+          const reqTime = (new Date()).getTime()
+          this.startConversation(conn, (err, selectedFeeds) => {
+            // Getting requests for all automatically sent manifests is not
+            // mandatory in this stage, we're only using this callback for local statistics.
+            if (err && err.type !== 'ManifestResponseTimedOutError') return conn.kill(err)
+            else if (!err) {
+              const resTime = (new Date()).getTime() - reqTime
+              debug(`Remote response (${resTime}ms)`)
+            } else {
+              console.warn(`Remote ignored our manifest`)
+            }
           })
-        })
+        }
+        this.emit('connect', conn)
         break
       case STATE_DEAD:
         // cleanup up
@@ -284,7 +366,9 @@ class Replic8 extends EventEmitter {
         conn.off('feed', this._onFeedReplicated)
         this.connections.splice(this.connections.indexOf(conn), 1)
         this.emit('disconnect', err, conn)
-        if (conn.lastError) this.emit('error', conn.lastError)
+        if (conn.lastError) {
+          this.emit('error', conn.lastError, conn)
+        }
         break
     }
   }

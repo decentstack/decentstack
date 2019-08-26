@@ -10,7 +10,7 @@ const corestore = require('../examples/replic8-corestore')
 const typedecorator = require('../examples/type-decorator')
 const { encodeHeader } = typedecorator
 
-test.only('The replic8 interface', t => {
+test('The replic8 interface', t => {
   t.plan(91)
   const encryptionKey = Buffer.alloc(32)
   encryptionKey.write('foo bars')
@@ -124,13 +124,10 @@ test.only('The replic8 interface', t => {
   }
 })
 
-// Current hyperdrive is broken when it comes to reporting
-// the sub-core, i should experiment with the prerelease.
-// Update! Prelease using core-store has even less compatible replication.
-// I'll try and submit a PR to andrewosh/corestore rewriting the .replicate()
-// function into a non stream hogging version.
+// Hyperdrive V10 is not reporting close
+// events properly.
 test('Composite-core replication', t => {
-  t.plan(11)
+  t.plan(12)
   const encryptionKey = Buffer.alloc(32)
   encryptionKey.write('foo bars')
 
@@ -147,9 +144,10 @@ test('Composite-core replication', t => {
   store1.readyFeeds(snapshot => {
     const [ drive ] = snapshot
     const message = Buffer.from('Cats are everywhere')
+    t.equal(drive.version, 1, 'Version 1')
     drive.writeFile('README.md', message, err => {
       t.error(err)
-      t.equal(drive.version, 1, 'Version 1')
+      t.equal(drive.version, 2, 'Version 2')
       // console.log('Drive metadata:', drive.metadata.discoveryKey.hexSlice(0, 6))
       // console.log('Drive content:', drive.content.discoveryKey.hexSlice(0, 6))
       mgr2.once('disconnect', (err, conn) => {

@@ -4,7 +4,7 @@ kappa-db/replic8
 
 > Replication manager for [hypercore](mafintosh/hypercore) & [hypercoreprotocol](mafintosh/hypercore-protocol) compatible data-structures.
 
-##### API Poposal 0.6.1
+##### API Poposal 0.6.2
 Request For Comment! [open an issue](https://github.com/telamon/replic8/issues)
 
 This is an working alpha, feedback and testing is highly appreciated!
@@ -85,9 +85,9 @@ const app = {
     next(null, feed)
   }
 
-  // Optional hook that will be invoked when
+  // hook that will be invoked when
   // this middleware gets appended to a replication stack
-  _on_use(manager, namespace) {
+  mounted(manager, namespace) {
     // exposes possiblity to attach
     // internal/nested middleware
     manager.use(namespace, this.multifeed)
