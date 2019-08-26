@@ -531,4 +531,6 @@ class Replic8 extends EventEmitter {
 module.exports = function (...args) {
   return new Replic8(...args)
 }
+
 module.exports.Replic8 = Replic8
+module.exports.PeerConnection = PeerConnection
