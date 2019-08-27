@@ -6,8 +6,6 @@ const PeerConnection = require('./lib/peer-connection.js')
 const substream = require('hypercore-protocol-substream')
 const {
   EXCHANGE,
-  PROTOCOL_VERSION,
-  VERSION,
   STATE_ACTIVE,
   STATE_DEAD
 } = require('./lib/constants')
@@ -309,20 +307,11 @@ class Replic8 extends EventEmitter {
     if (!opts.extensions) opts.extensions = []
     const extensions = [...this.extensions, ...opts.extensions]
 
-    // userdata intentionally serialized as plain json so that any client
-    // can read it without depending on our protobuf schema
-    // Only gotcha is that the string MUST be utf-8 encoded.
-    const userData = Buffer.from(JSON.stringify({
-      client: 'REPLIC8',
-      dialect: PROTOCOL_VERSION,
-      version: VERSION
-    }), 'utf8')
-
     const mergedOpts = Object.assign(
       {},
       this.protocolOpts,
       opts,
-      { extensions, userData }
+      { extensions }
     )
     // TODO:  filter mergedOpts to only allow
     // live
