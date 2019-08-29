@@ -22,6 +22,13 @@ This is an working alpha, feedback and testing is highly appreciated!
 - [ ] Provide connection statistics (transfer rate / transfered bytes / latency)
 - [ ] Expose peer-substreams through API to applications/middleware.
 
+## Installation
+
+A pre-release is now available on npm.
+
+```sh
+npm i replic8
+```
 
 ## Usage
 ```js
@@ -49,7 +56,7 @@ swarm.on('connection', mgr.handleConnection)
 ```
 
 ## Middleware Interface
-Is up to date `v0.6.1` !
+Is up to date `v0.6.2` !
 
 All callbacks are optional, a middleware can for instance implement only the `describe` callback.
 ```js
@@ -106,12 +113,14 @@ mgr.use(app)
 
 
 **Replication filter**
+
 ```js
-// Given an application that attaches `lastActivity` during announce().
+// Given an application that decorates announcement with `lastActivity` timestamp
 // Filter stale feeds from replication.
+const aWeek = 60*60*24*7*1000
 const timeFilter = {
   accept ({key, meta}, next) {
-    if (new Date().getTime() - data.lastActivity < 60*60*24*30) {
+    if (new Date().getTime() - meta.lastActivity < aWeek) {
       next(null, key)
     } else {
       next()
@@ -119,114 +128,32 @@ const timeFilter = {
   }
 }
 
-multifeed.use(timeFilter)
+mgr.use(timeFilter)
 ```
+**More examples**
 
-**Define a store that uses multifeed as a replication manager**
-
-```js
-const ram = require('random-access-memory')
-const hypercore = require('hypercore')
-const hyperswarm = require('hyperswarm')
-const { replicate } = require('multifeed')
-
-// A very optimistic core store
-const store = [ hypercore(ram), hypercore(ram), hypercore(ram) ]
-
-// Initialize a new manager
-const mgr = replic8(encryptionKey) , opts)
-
-mgr.use({
-  announce (manifest, share) {
-    // Share all available feeds
-    share(store)
-  },
-
-  accept (offer, select) {
-    // Accept all offered keys
-    select(offer.keys)
-  },
-
-  resolve (keys, next) {
-    const cores = offer.keys.map(key, n) => {
-      // fetch core from store
-      let core = store.find(c => c.key === key)
-
-      // initialize if not exists
-      if (core) return core
-        core = hypercore(ram, key) // initialize it using provided key
-        store.push(core) // register new core with storage
-        selected.push(core) // select it for replication
-      }
-    })
-    next(cores)
-  }
-})
-
-// Setup swarm
-const swarm = hyperswarm.join('some topic')
-swarm.on('connection', mgr.connect)
-```
-
-**A core type decorator**
-```js
-const ram = require('random-access-memory')
-const multifeed = require('multifeed')
-const { replicate } = multifeed
-
-const TypeDecorator = {
-  announce: ({keys, meta}, next) {
-  keys.forEach(key => {
-      this.resolve(key).get(0, (err, data) => {
-          // attempt decoding DEP-0007 header
-          try {
-            const hdr = parseHeader(data)
-            // decorate replicated data with core-type
-            meta[keys].type = hdr.type
-          } catch (err) {
-            console.warn('Failed decoding header', key, err)
-          }
-          next(keys, meta)
-      })
-    })
-  })
-}
-
-const mgr = replicate()
-// Register 3 instances of multifeed, each hosting different cores
-mgr.use(multifeed(ram, (...args) => hypercore(...args)))
-mgr.use(multifeed(ram, (...args) => hyperdrive(...args)))
-mgr.use(multifeed(ram, (...args) => hypertrie(...args)))
-// watch core-type metadata be transmitted to other peers
-mgr.use(TypeDecorator)
-```
+* [Array storage](./examples/array-store.js)
+* [CoreType decorator](./examples/type-decorator.js)
+* [corestore-replic8 adapter](./examples/replic8-corestore.js)
 
 **Backwards compatibility**
 
-If we extend `multifeed` with a new option, it would enable us to mount
-multifeed onto an external replication manager.
+Replic8 is my continued work from [multifeed's](https://github.com/kappa-db/multifeed) internal
+replication management.
 
-When option is omitted, multifeed instantiates it's own manager instance
-internally.
+Any application currently using multifeed should have access to the middleware api.
 
 ```js
-const multifeed = require('multifeed')
+// Multifeed accept an external replic8 instance
 const multi = multifeed(ram, aKey, { replicate: mgr})
 
-// or  mgr.use(multi) pattern better?
-```
+// -- or --
 
-The `replicate` option can be passed through by both `kappa-core` and higher
-level applications
+const multi = multifeed(ram, aKey)
+multi.use(mgr)
 
-```js
-const kappa = require('kappa-core')
-const core =  kappa('./log', { valueEncoding: 'json', replicate: mgr })
-
-const Cabal = require('cabal-core')
-const cabl = Cabal(ram, null, {replicate: mgr})
-
-// or mgr.use(cabl)
+// Multifeed initializes a new replic8 instance internally if no
+// replication manager is present when multi.replicate() or multi.use() is invoked.
 ```
 
 ## A note on stack-order

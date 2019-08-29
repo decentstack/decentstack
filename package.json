@@ -1,17 +1,27 @@
 {
   "name": "replic8",
-  "version": "1.0.0",
+  "version": "0.6.2",
   "description": "Hypercore replication manager",
   "main": "index.js",
   "author": "Tony Ivanov <telamohn@pm.me>",
-  "license": "MIT",
+  "license": "ISC",
   "private": false,
+  "keywords": [
+    "hypercore",
+    "replication",
+    "manager",
+    "multifeed"
+  ],
   "scripts": {
     "test": "tape test/*",
     "debug": "node inspect $(npm bin)/tape test/*",
     "bail": "npm test | tap-bail",
     "protobuf": "$(npm bin)/protocol-buffers -o lib/messages.js schema.proto",
     "lint": "standard"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/telamon/replic8.git"
   },
   "dependencies": {
     "end-of-stream": "^1.4.1",
