@@ -349,10 +349,10 @@ class Replic8 extends EventEmitter {
         break
       case STATE_DEAD:
         // cleanup up
-        conn.off('state-changed', this._onConnectionStateChanged)
-        conn.off('manifest', this._onManifestReceived)
-        conn.off('replicate', this._onReplicateRequest)
-        conn.off('feed', this._onFeedReplicated)
+        conn.removeListener('state-changed', this._onConnectionStateChanged)
+        conn.removeListener('manifest', this._onManifestReceived)
+        conn.removeListener('replicate', this._onReplicateRequest)
+        conn.removeListener('feed', this._onFeedReplicated)
         this.connections.splice(this.connections.indexOf(conn), 1)
         this.emit('disconnect', err, conn)
         if (conn.lastError) {
