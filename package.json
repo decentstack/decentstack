@@ -27,7 +27,7 @@
     "end-of-stream": "^1.4.1",
     "hypercore": "^7.5.1",
     "hypercore-protocol": "^6.11.1",
-    "hypercore-protocol-substream": "^2.0.2",
+    "hypercore-protocol-substream": "^2.0.7",
     "protocol-buffers-encodings": "^1.1.0"
   },
   "devDependencies": {
