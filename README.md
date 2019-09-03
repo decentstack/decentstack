@@ -312,7 +312,7 @@ as opposite to `mgr.replicate()`.
 
 returns `PeerConnection`
 
-### `mgr.close([err,] cb)`
+#### `mgr.close([err,] cb)`
 
 Closes all active connections and invokes `close`
 on all middleware.
