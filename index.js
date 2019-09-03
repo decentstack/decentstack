@@ -283,7 +283,10 @@ class Replic8 extends EventEmitter {
    * Might want to add an optional callback to properly
    * notify invoker
    */
-  destroy (err) {
+  close (err, cb = null) {
+    if (typeof err === 'function') this.close(null, err)
+    if (typeof cb === 'function') this.once('close', cb)
+
     for (const conn of this.connections) {
       conn.kill(err)
     }
@@ -292,13 +295,14 @@ class Replic8 extends EventEmitter {
       const snapshot = [...this._middleware[ns]]
       for (const ware of snapshot) {
         // notify subscribing middleware
-        if (typeof ware._on_destroy === 'function') {
-          ware._on_destroy(err)
+        if (typeof ware.close === 'function') {
+          ware.close(err)
         }
         // remove middlware from the stack
         this._middleware[ns].splice(this._middleware[ns].indexOf(ware), 1)
       }
     }
+    this.emit('close', err)
   }
   // ----------- Internal API --------------
 

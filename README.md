@@ -4,7 +4,7 @@ kappa-db/replic8
 
 > Replication manager for [hypercore](mafintosh/hypercore) & [hypercoreprotocol](mafintosh/hypercore-protocol) compatible data-structures.
 
-##### API Poposal 0.6.2
+##### API Poposal 0.7.0
 Request For Comment! [open an issue](https://github.com/telamon/replic8/issues)
 
 This is an working alpha, feedback and testing is highly appreciated!
@@ -56,7 +56,7 @@ swarm.on('connection', mgr.handleConnection)
 ```
 
 ## Middleware Interface
-Is up to date `v0.6.2` !
+Is up to date `v0.7.0` !
 
 All callbacks are optional, a middleware can for instance implement only the `describe` callback.
 ```js
@@ -90,7 +90,7 @@ const app = {
   resolve(key, next) {
     const feed = findFeedByKeySomehow(key)
     next(null, feed)
-  }
+  },
 
   // hook that will be invoked when
   // this middleware gets appended to a replication stack
@@ -103,6 +103,11 @@ const app = {
     // Initiate a side-channel replicating bulk resources
     manager.use(namespace + '/attachments', this.drivesMultifeed)
     manager.use(namespace + '/attachments', require('./examples/type-decorator'))
+  },
+
+  // Invoked when replication manager is closing
+  close () {
+    this.multifeed.close()
   }
 }
 
@@ -218,15 +223,24 @@ registration.
 prevent a core ending up in the wrong store or being instantiated with wrong
 class.
 
-`middleware` should be an object that responds to `announce`, `accept` and
-optionally `resolve`
+`middleware` should be an object that optionally implements methods:
 
-#### middleware `announce: function(context, next)`
+`share`, `describe`, `accept`, `resolve`, `mounted`, `close`
+
+#### middleware `share: function(next)`
+
+Share a list of cores: `next(null, [...])`
+
+#### middleware `describe: function(context, next)`
+
+TODO: inaccurate
+
 Invoked during connection initialization directly after a successful handshake.
 
-`manifest` - Object, contains previous middleware results as `{keys:[], headers:[]}`
+const { key, meta, resolve } = context
 
-`share(keys, headers)` - function, takes two arrays, where `keys`
+
+`share(key, headers)` - function, takes two arrays, where `keys`
 is required to contain only feed-keys and `headers` is expected to contain
 serializable Objects.
 The length of both arrays is expected to be equal.
@@ -234,16 +248,22 @@ The length of both arrays is expected to be equal.
 
 #### middleware `accept: function(context, next)`
 Invoked when remote end has advertised a list of cores
+```js
+// Reject/filter a core
+next(null, false)
 
-`offer` - Object supports keys: `keys` and `headers`  representing
-the same object that was announced by remote or selected by
-the previous middleware.
+// Let a core pass through to next middleware
+next()
 
-`select` - Function `function(err, selectedKeys)`
-If error is encountered, peer will be dropped?
+// Accept core by returning an instance (ends stack traversal)
+const core = hypercore(storage, context.key)
+core.ready(() => {
+  next(null, core)
+})
+```
+
 
 #### middleware `resolve: function(key, next)`
-(*optional*)
 
 `key` - hex-string
 
@@ -259,6 +279,14 @@ has been queried. An `error` event containing a `UnresolvedCoreError`
 will be emitted on the manager instance and the peer-connection will be
 dropped.<sup>[4](#4)</sup>
 
+#### middleware `mounted: function(manager, namespace)`
+
+Invoked when middleware is added to stack.
+Can be used to initialize and add additional middleware.
+
+#### middleware `close: function()`
+
+Invoked when replication manager is closing
 
 #### `mgr.connections`
 
@@ -284,6 +312,10 @@ as opposite to `mgr.replicate()`.
 
 returns `PeerConnection`
 
+### `mgr.close([err,] cb)`
+
+Closes all active connections and invokes `close`
+on all middleware.
 
 #### event `'connected', PeerConnection`
 
