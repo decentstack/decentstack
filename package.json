@@ -1,6 +1,6 @@
 {
   "name": "replic8",
-  "version": "0.6.4",
+  "version": "0.7.0",
   "description": "Hypercore replication manager",
   "main": "index.js",
   "author": "Tony Ivanov <telamohn@pm.me>",
