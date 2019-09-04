@@ -28,7 +28,8 @@
     "hypercore": "^7.5.1",
     "hypercore-protocol": "^6.11.1",
     "hypercore-protocol-substream": "^2.0.7",
-    "protocol-buffers-encodings": "^1.1.0"
+    "protocol-buffers-encodings": "^1.1.0",
+    "pump": "^3.0.0"
   },
   "devDependencies": {
     "corestore": "^2.0.0",

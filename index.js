@@ -296,7 +296,7 @@ class Replic8 extends EventEmitter {
       for (const ware of snapshot) {
         // notify subscribing middleware
         if (typeof ware.close === 'function') {
-          ware.close(err)
+          ware.close()
         }
         // remove middlware from the stack
         this._middleware[ns].splice(this._middleware[ns].indexOf(ware), 1)
