@@ -20,14 +20,14 @@ class Replic8 extends EventEmitter {
     this.protocolOpts = opts || {}
     // lift our own opts
     this.opts = {
-      initiate: opts.initiate
+      noTalk: opts.noTalk
     }
     this.extensions = [EXCHANGE, substream.EXTENSION]
     if (Array.isArray(opts.extensions)) this.extensions = [...this.extensions, ...opts.extensions].sort()
 
     // don't pollute hypercore-protocol opts
     delete this.protocolOpts.extensions
-    delete this.protocolOpts.initiate
+    delete this.protocolOpts.noTalk
 
     this._middleware = {}
     this.connections = []
@@ -74,22 +74,20 @@ class Replic8 extends EventEmitter {
     */
   }
 
-  // TODO:
-  // handlePeer (peerInfo) {
-  //    debugger
-  //    const sess = handleConnection(net.createTcpStream(peer.addres, peer.port), peerInfo)
-  // }
-
-  handleConnection (stream, opts = {}, peerInfo = null) {
-    const conn = this._newExchangeStream(opts)
-    conn.peerInfo = peerInfo
-    stream.pipe(conn.stream).pipe(stream)
+  // handleConnection is an alternative to using replicate()
+  // Except it returns the PeerConnection instance instead of
+  // just the stream.
+  handleConnection (initiator, opts = {}) {
+    assert(typeof initiator === 'boolean', 'Initiator must be a boolean')
+    const conn = this._newExchangeStream(initiator, opts)
+    const stream = opts.stream
+    if (stream) stream.pipe(conn.stream).pipe(stream)
     return conn
   }
 
-  replicate (opts = {}) {
-    if (opts.stream) return this.handleConnection(opts.stream, opts)
-    else return this._newExchangeStream(opts).stream
+  replicate (initiator, opts = {}) {
+    assert(typeof initiator === 'boolean', 'Initiator must be a boolean')
+    return this.handleConnection(initiator, opts).stream
   }
 
   get namespaces () {
@@ -307,7 +305,7 @@ class Replic8 extends EventEmitter {
   // ----------- Internal API --------------
 
   // Create an exchange stream
-  _newExchangeStream (opts = {}) {
+  _newExchangeStream (initiator, opts = {}) {
     if (!opts.extensions) opts.extensions = []
     const extensions = [...this.extensions, ...opts.extensions]
 
@@ -323,7 +321,7 @@ class Replic8 extends EventEmitter {
     // upload
     // encrypt
     // stream
-    const conn = new PeerConnection(this.encryptionKey, mergedOpts)
+    const conn = new PeerConnection(initiator, this.encryptionKey, mergedOpts)
     this.connections.push(conn)
     conn.on('state-change', this._onConnectionStateChanged)
     conn.on('manifest', this._onManifestReceived)
@@ -335,7 +333,7 @@ class Replic8 extends EventEmitter {
     switch (state) {
       case STATE_ACTIVE:
         // Check if manual conversation initiation requested
-        if (this.opts.initiate !== false) {
+        if (!this.opts.noTalk) {
           const reqTime = (new Date()).getTime()
           this.startConversation(conn, (err, selectedFeeds) => {
             // Getting requests for all automatically sent manifests is not

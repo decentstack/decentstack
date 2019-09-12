@@ -3,6 +3,7 @@ const hypercore = require('hypercore')
 const hyperdrive = require('hyperdrive')
 const ram = require('random-access-memory')
 const ReplicationManager = require('..')
+const through = require('through2')
 
 // examples
 const ArrayStore = require('../examples/array-store')
@@ -113,10 +114,11 @@ test('The replic8 interface', t => {
   })
 
   // Initialize a resverse stream
-  const stream = remoteMgr.replicate()
+  const stream = remoteMgr.replicate(true)
 
   // Preferred connection handler
-  const connection = mgr.handleConnection(stream)
+  const connection = mgr.handleConnection(false, { stream })
+  // stream.pipe(connection.stream).pipe(stream)
   t.ok(connection)
   // Also supported but not explored patterns includes:
   // mgr.replicate({ stream })

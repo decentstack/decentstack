@@ -26,10 +26,11 @@
   "dependencies": {
     "end-of-stream": "^1.4.1",
     "hypercore": "^7.5.1",
-    "hypercore-protocol": "^6.11.1",
+    "hypercore-protocol": "mafintosh/hypercore-protocol#v7",
     "hypercore-protocol-substream": "^2.0.7",
     "protocol-buffers-encodings": "^1.1.0",
-    "pump": "^3.0.0"
+    "pump": "^3.0.0",
+    "xxhashjs": "^0.2.2"
   },
   "devDependencies": {
     "corestore": "^2.0.0",
@@ -41,6 +42,7 @@
     "tap-spec": "^5.0.0",
     "tap-stream": "^0.2.0",
     "tape": "^4.10.2",
-    "tapenet": "^1.4.0"
+    "tapenet": "^1.4.0",
+    "through2": "^3.0.1"
   }
 }
