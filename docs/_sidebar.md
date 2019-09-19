@@ -1,5 +1,4 @@
-- [Introduction](/)
-- [Middleware](./middleware_interface.md)
-- [API Reference](./api_reference.md)
-- Guides
-  - [Getting started](./getting_started.md)
+- [Welcome](/)
+- [Getting started](/getting_started.md)
+- [Middleware](/middleware_interface.md)
+- [API Reference](/api_reference.md)

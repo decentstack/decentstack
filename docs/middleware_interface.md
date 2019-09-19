@@ -7,8 +7,8 @@ Middleware Interface
 ##  Abstract
 
 The application stacks we use today have limited vertical interaction between
-components, this becomes painfully evident if you attempt to apply any kind
-of logic to what your peer should share with the rest of the swarm.
+components, this becomes painfully evident if you attempt to add any kind of
+conditional logic to replication.
 
 The application is aware of feed-content and is able to define higher level
 selection rules but lacks the mandate apply them.
@@ -22,14 +22,13 @@ _Without power, knowledge is useless_
 The middleware interface is intended to complement the standard [Dat SDK](https://github.com/datproject/sdk) toolset, defining a datastructure agnostic approach to Application Defined Replication control.
 
 It separates core storage from replication management, allowing the
-top-level application to define the replication rules.
+top-level application to define the _what_, _when_ and _how_ something is stored
+and replicated.
 
-Which for instance gives us a chance to solve scaling issues related to high core-counts.
-
-## Introducing the interface
+## Introduction
 
 The interface describes a set of methods that should be
-easy and straightforward to implement.
+straightforward to implement.
 
 Once implemented, your software can be included in a stack and
   communicate with other stack-denizents without prior knowledge of the stack configuration.
