@@ -77,10 +77,11 @@ class Replic8 extends EventEmitter {
   // handleConnection is an alternative to using replicate()
   // Except it returns the PeerConnection instance instead of
   // just the stream.
-  handleConnection (initiator, opts = {}) {
+  handleConnection (initiator, stream, opts = {}) {
     assert(typeof initiator === 'boolean', 'Initiator must be a boolean')
+    if (stream && typeof stream.pipe !== 'function') return this.handleConnection(initiator, null, stream)
     const conn = this._newExchangeStream(initiator, opts)
-    const stream = opts.stream
+    stream = stream || opts.stream
     if (stream) stream.pipe(conn.stream).pipe(stream)
     return conn
   }
