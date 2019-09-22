@@ -1,10 +1,10 @@
 {
-  "name": "replic8",
+  "name": "decentstack",
   "version": "0.7.1",
-  "description": "Hypercore replication manager",
+  "description": "Decentralized application framework",
   "main": "index.js",
   "author": "Tony Ivanov <telamohn@pm.me>",
-  "license": "ISC",
+  "license": "AGPL-3.0-or-later",
   "private": false,
   "keywords": [
     "hypercore",
