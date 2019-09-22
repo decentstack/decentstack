@@ -1,6 +1,7 @@
-kappa-db/replic8
+decentstack
 =================
 
+# These docs are outdated, new ones are being written!
 
 > Replication manager for [hypercore](mafintosh/hypercore) & [hypercoreprotocol](mafintosh/hypercore-protocol) compatible data-structures.
 
