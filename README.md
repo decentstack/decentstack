@@ -1,7 +1,9 @@
 decentstack
 =================
 
-# These docs are outdated, new ones are being written!
+### These docs are outdated, new ones are being written!
+Meanwhile check the announcement to see where this project is headed:
+https://github.com/decentstack/decentstack/issues/2
 
 > Replication manager for [hypercore](mafintosh/hypercore) & [hypercoreprotocol](mafintosh/hypercore-protocol) compatible data-structures.
 
