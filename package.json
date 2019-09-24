@@ -16,8 +16,9 @@
     "test": "tape test/*",
     "debug": "node inspect $(npm bin)/tape test/*",
     "bail": "npm test | tap-bail",
-    "protobuf": "$(npm bin)/protocol-buffers -o lib/messages.js schema.proto",
-    "lint": "standard"
+    "protobuf": "protocol-buffers -o lib/messages.js schema.proto",
+    "lint": "standard",
+    "serve-docs": "docsify serve ./docs"
   },
   "repository": {
     "type": "git",
@@ -36,6 +37,7 @@
     "corestore": "^4.0.3",
     "hypercore": "^8.1.2",
     "hyperdrive": "^9.16.0",
+    "docsify-cli": "^4.3.0",
     "protocol-buffers": "^4.1.0",
     "random-access-memory": "^3.1.1",
     "save-our-sanity": "^1.0.0",
