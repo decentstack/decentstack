@@ -10,7 +10,7 @@ const corestore = require('../examples/replic8-corestore')
 const typedecorator = require('../examples/type-decorator')
 const { encodeHeader } = typedecorator
 
-test('The replic8 interface', t => {
+test('The middleware interface', t => {
   t.plan(94)
   const encryptionKey = Buffer.alloc(32)
   encryptionKey.write('foo bars')
@@ -113,10 +113,11 @@ test('The replic8 interface', t => {
   })
 
   // Initialize a resverse stream
-  const stream = remoteMgr.replicate()
+  const stream = remoteMgr.replicate(true)
 
   // Preferred connection handler
-  const connection = mgr.handleConnection(stream)
+  const connection = mgr.handleConnection(false, { stream })
+  // stream.pipe(connection.stream).pipe(stream)
   t.ok(connection)
   // Also supported but not explored patterns includes:
   // mgr.replicate({ stream })
@@ -133,8 +134,7 @@ test('The replic8 interface', t => {
   }
 })
 
-// Hyperdrive V10 is not reporting close
-// events properly.
+// Hyperdrive V10 does not support proto:v7 yet
 test.skip('Composite-core replication', t => {
   t.plan(12)
   const encryptionKey = Buffer.alloc(32)
@@ -178,12 +178,12 @@ test.skip('Composite-core replication', t => {
           t.end()
         })
       })
-      mgr1.handleConnection(mgr2.replicate())
+      mgr1.handleConnection(true, mgr2.replicate(false))
     })
   })
 })
 
-test('Corestore wrapper', t => {
+test.skip('Corestore wrapper', t => {
   t.plan(13)
   const encryptionKey = Buffer.alloc(32)
   encryptionKey.write('foo bars')
@@ -241,14 +241,14 @@ test('Corestore wrapper', t => {
         store1.get(otherCore.key)
         otherCore.append(msg2, err => {
           t.error(err)
-          mgr1.handleConnection(mgr2.replicate())
+          mgr1.handleConnection(true, mgr2.replicate(false))
         })
       })
     })
   })
 })
 
-test('Core type decorator', t => {
+test.skip('Core type decorator', t => {
   t.plan(3)
   const composite = corestore(ram)
   const core = hypercore(ram)
@@ -293,7 +293,7 @@ test('Core type decorator', t => {
 
     core.append(binhdr, err => {
       t.error(err)
-      const conn = mgr1.handleConnection(mgr2.replicate())
+      const conn = mgr1.handleConnection(false, mgr2.replicate(true))
       conn.once('end', err => {
         t.error(err)
         t.end()
@@ -311,6 +311,7 @@ test('regression: announce new feed on existing connections', t => {
         let conn1 = null
         let conn2 = null
         p1.store.on('feed', feed => {
+          debugger
           feed.get(0, (err, data) => {
             t.error(err)
             switch (feedsReplicated++) {
@@ -334,10 +335,10 @@ test('regression: announce new feed on existing connections', t => {
         })
 
         // mgr1 and mgr2 are now live connected.
-        conn1 = p1.mgr.handleConnection(p2.mgr.replicate())
+        conn1 = p1.mgr.handleConnection(true, p2.mgr.replicate(false))
 
         // When m3 is attached to m2, m2 should forward m3's writer to m1.
-        conn2 = p3.mgr.handleConnection(p2.mgr.replicate())
+        conn2 = p3.mgr.handleConnection(false, p2.mgr.replicate(true))
       })
     })
   })
@@ -348,7 +349,7 @@ test('regression: announce new feed on existing connections', t => {
     const mgr = ReplicationManager(encryptionKey, { live: true })
     mgr.once('error', t.error)
     const store = new ArrayStore(ram, hypercore, 1)
-    mgr.use(store)
+    mgr.use(store, 'ArrayStore')
     const feed = store.feeds[0]
     const ret = { mgr, store, feed }
     feed.ready(() => {
