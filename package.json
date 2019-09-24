@@ -24,7 +24,7 @@
     "url": "git+https://github.com/telamon/replic8.git"
   },
   "dependencies": {
-    "end-of-stream": "^1.4.1",
+    "end-of-stream": "^1.4.3",
     "hypercore-protocol": "mafintosh/hypercore-protocol#v7",
     "hypercore-protocol-substream": "^2.0.7",
     "protocol-buffers-encodings": "^1.1.0",
@@ -32,13 +32,13 @@
     "xxhashjs": "^0.2.2"
   },
   "devDependencies": {
-    "corestore": "^3.0.0",
-    "hypercore": "^8.0.2",
+    "corestore": "^4.0.3",
+    "hypercore": "^8.1.2",
     "hyperdrive": "^9.16.0",
     "protocol-buffers": "^4.1.0",
     "random-access-memory": "^3.1.1",
     "save-our-sanity": "^1.0.0",
-    "standard": "^12.0.1",
+    "standard": "^14.3.1",
     "tap-bail": "^1.0.0",
     "tap-spec": "^5.0.0",
     "tap-stream": "^0.2.0",

@@ -124,6 +124,7 @@ test('The middleware interface', t => {
   // stream.pipe(mgr.replicate()).pipe(stream)
 
   const finishUp = () => {
+    debugger
     t.equal(localStore.feeds.length, 4, 'All feeds available on local')
     t.equal(remoteStore.feeds.length, 4, 'All feeds available on remote')
 
