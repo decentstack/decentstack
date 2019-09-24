@@ -24,6 +24,7 @@
     "url": "git+https://github.com/telamon/replic8.git"
   },
   "dependencies": {
+    "deferinfer": "^1.0.1",
     "end-of-stream": "^1.4.3",
     "hypercore-protocol": "mafintosh/hypercore-protocol#v7",
     "hypercore-protocol-substream": "^2.0.7",
