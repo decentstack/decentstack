@@ -70,7 +70,7 @@ All callbacks are optional, an `Object` is considered **usable**
 | `close`               | reverse            | Notify application that the stack is being torn down              |
 
 ### share
-`share(next => { ... })`
+`share (next)`
 
 **Callback parameters**
 
@@ -92,6 +92,58 @@ const coreB = hypercore(storage)
 stack.use({
   share (next) {
     next(null, [coreA, coreB])
+  }
+})
+```
+
+### decorate
+`decorate (context, next)`
+
+**Callback parameters**
+- `{Object} context` contains helper properties:
+  - `{String} key` hex-string representation of the core-key
+  - `{Object} meta` Metadata from previous middleware or empty hash
+  - `{Function} resolve` Get the core described identified `key` (Promise|Callback)
+- `{Function} next (error, coresOrKeys)`
+  - `{Object} error` If passed, aborts stack iteration and causes
+    `PeerConnection` to be dropped
+  - `{Object} meta` If passed, will be merged into current metadata.
+
+**Description**
+
+Allows your middleware to attach metadata to the feed denoted by `key`
+
+The keys and values exposed here will be transmitted to the remote peer
+in order to let him apply pre-replicate selection logic.
+
+```js
+stack.use({
+  async decorate({key, meta, resolve}, next) {
+    const feed = await resolve().catch(next) // Always handle errors
+
+    meta.foo = 'bar' // Either mutate the provided object
+    next(null, { seq: feed.length }) // or let decentstack perform a merge
+  }
+})
+```
+
+### mouted
+`mounted (stack, namespace)`
+
+**Callback parameters**
+- `{Object} stack` The stack to which this middleware was added
+- `{String} namespace` The namespace this middleware was assigned
+
+**Description**
+
+Invoked when your middleware is added to a stack, use this hook to either
+lazily initialize your app or register internal submodules.
+
+```js
+stack.use({
+  mounted(stack, namespace) {
+    console.log('I was mounted on namespace:', namespace)
+    stack.use(namespace, new AwesomeDecorator())
   }
 })
 ```

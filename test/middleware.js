@@ -2,7 +2,6 @@ const test = require('tape')
 const RAM = require('random-access-memory')
 const hypercore = require('hypercore')
 const decentstack = require('..')
-const sos = require('save-our-sanity')
 
 const key = Buffer.alloc(32)
 key.write('hello')

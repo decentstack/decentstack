@@ -20,7 +20,7 @@ interface](/middleware_interface.md)
 and [let us hear your thoughts!](https://github.com/decentpass/decentpass/issues/middleware_interface_design)
 
 Else if you're new to the community you might appreciate the [Getting
-started guide](./getting_started.md).
+started guide](getting_started.md).
 
 Happy to have you!
 
