@@ -1,6 +1,59 @@
+# API
+
+!> All public methods that involve an asynchroneous operation
+support both callback and promise invocation through [deferinfer]()
+Having said that, try to avoid using both the promise and the callback at the
+same time when invoking a method.
+
+
 ## class `Decentstack`
 
-#### `const mgr = replic8(encryptionKey, opts)`
+### Constructor
+```
+// Factory style
+const decentstack = require('decentstack')
+const stack = decentstack(key, opts)
+
+// ES6 Class style
+const { Decentstack } = require('decentstack')
+const stack = new Decentstack(key, opts)
+```
+
+### Function: snapshot
+
+`snapshot([namespace], [keys], [callback])`
+
+**Arguments**
+
+- *optional* `{string} namespace` default: `'default'`
+- *optional* `{Array} keys` limits snapshot to specified keys
+- *optional* `{Function} callback` node style callback
+
+**Returns**
+- `{Promise} snapshot`
+  - `{Array} keys` shared keys
+  - `{Array} meta` decorated metadata
+
+**Description**
+
+Generates a snapshot of current shares by
+iterates through the stack invoking `share`, `decorate` and `hold`
+methods on middleware returns a promise of a snapshot
+
+```js
+const snapshot = await stack.snapshot()
+console.log('My stack currently shares', snapshot)
+
+stack.snapshot('media', (error, snapshot) => {
+  if (error) throw error
+  console.log('My stack currently shared media', snapshot)
+})
+```
+
+old
+---
+
+#### `const stack = decentstack(encryptionKey, opts)`
 
 `encryptionKey` pre-shared-key Buffer(32), used for exchange & meta message encryption
 `opts` hypercore-protocol opts
@@ -11,7 +64,7 @@ encountered then by default the manager initiates a new announce
 exchange with all active peers that have not been offered that
 key yet. This flags turns off that behaviour.
 
-#### `mgr.use(namespace, middleware)`
+#### `stack.use(namespace, middleware)`
 
 Assembles an application stack where each middleware will be invoked in order of
 registration.
@@ -20,27 +73,26 @@ registration.
 prevent a core ending up in the wrong store or being instantiated with wrong
 class.
 
-`middleware` should be an object that optionally implements methods:
+`middleware` should be an object that optionally implements at least one of the
+methods defined in [middleware interface](./middleware_interface.md)
 
-`share`, `describe`, `accept`, `resolve`, `mounted`, `close`
-
-#### `mgr.key`
+#### `stack.key`
 
 Exchange channel encryption key
 
-#### `mgr.replicate(opts)`
+#### `stack.replicate(initiator, opts)`
 Creates a PeerConnection returns it's stream
 (compatibility)
 
 returns `stream`
 
-#### `mgr.handleConnection(stream)`
+#### `stack.handleConnection(initiator, stream, opts)`
 The preffered way to add peer-connections to the manager
-as opposite to `mgr.replicate()`.
+as opposite to `stack.replicate()`.
 
 returns `PeerConnection`
 
-#### `mgr.close([err,] cb)`
+#### `stack.close([err,] cb)`
 
 Closes all active connections and invokes `close`
 on all middleware.

@@ -51,26 +51,45 @@ standards, if you for any reason don't want to
 use Decentstack as a middleware host, it should be an easy task to implement
 your own middleware host using the specification below.
 
-## Specification
 
-### Callbacks
+## Callbacks
 All callbacks are optional, an `Object` is considered **usable**
  as long as it implements at least one of the methods listed below.
 
 
 | Core API              | Stack traversal    | Purpose                                                           |
 | :----------           | -----------------: | ---------                                                         |
-| `share`               | forward            | Assemble list of cores                                            |
-| `describe`            | forward            | Append metadata to outgoing advertisement                         |
-| `hold`                | forward            | "Unshare" / prevent cores to be advertised to remote              |
-| `reject`              | reverse            | Filter incoming advertisements & store cores                      |
-| `store`               | reverse            | Provide `RandomAccess` storage for an accepted core               |
-| `resolve`             | forward            | Find and return core by key                                       |  |
+| `share`               | reverse            | Assemble list of cores                                            |
+| `describe`            | reverse            | Append metadata to outgoing advertisement                         |
+| `hold`                | reverse            | "Unshare" / prevent cores to be advertised to remote              |
+| `reject`              | forward            | Filter incoming advertisements & store cores                      |
+| `store`               | forward            | Provide `RandomAccess` storage for an accepted core               |
+| `resolve`             | reverse            | Find and return core by key                                       |  |
 | **Lifecycle Helpers** |                    |                                                                   |
 | `mounted`             | --                 | Notify application that it was included & let it bootstrap itself |
-| `close`               | --                 | Notify application that the stack is being torn down              |
+| `close`               | reverse            | Notify application that the stack is being torn down              |
 
-### Lifecycle
+### share
+`share(function callback(next) { ... })`
+
+**Callback parameters**
+
+- `{Function} next(error, coresOrKeys)`
+  - `{Object} error` If passed, aborts stack iteration and causes
+    `PeerConnection` to be dropped
+  - `{Array} coresOrKeys` A list of shared keys or cores
+
+```js
+const coreA = hypercore(storage)
+const coreB = hypercore(storage)
+stack.use({
+  share (next) {
+    next(null, [coreA, coreB])
+  }
+})
+```
+
+## Lifecycle
 
 The diagram below illustrates the typical flow of callback invocation
 
@@ -83,10 +102,65 @@ replication session was initiated with option `live` set to `true`.
 lifecycle by other middleware, but the middleware-host will only invoke the
 callback when it needs resolve a core in order to `.replicate()`
 
-### Stack iteration order
+## Stack iteration order
 
 ![Stack iteration order diagram](./stack_iteration_order.svg)
 
+!>In order to make it eaiser to write useful selfcontained middleware,
+the stack iteration order has been **reversed** during the share process.
+
+As an example, the following stack configuration:
+```js
+stack.use(filterA)
+stack.use(filterB)
+stack.use({ // App1
+  mounted (stack) {
+    stack.use(filterC)
+    stack.use(decorator)
+    stack.use(store1)
+  }
+})
+stack.use(store2)
+stack.use(store3)
+```
+Will result in the following linear stack:
+
+```js
+[filterA, filterB, App1, filterC, decorator1, store1, store2, store3]
+```
+
+`reject()` and `store()` callbacks on middleware will logically be invoked in
+the same order that they were registered
+
+```js
+[filterA, filterB, FilterC].forEach(w => w.reject(listOfCores))
+[store1, store2, store3].forEach(w => w.store(listOfCores))
+```
+
+But `share`, `describe`, `hold` and `resolve` callbacks will be invoked in
+**reverse** order of registration:
+
+```js
+[store3, store2, store1].forEach(w => w.share())
+[filterC, filterB, filterA].forEach(w => w.hold())
+```
+**Practical experiment:**
+
+1. Place two glass jars side by side,
+2. Drop some grains into the jar _A_.
+3. Put a mesh-filter with big holes ontop of each jar
+4. Put a mesh-filter with small holes mesh ontop of each jar
+5. Hold jar _A_ **upside down** over jar _B_
+6. Observe the order that the grains pass through the filters.
+7. Reverse positions of _A_ and _B_ and observe grains travel into the reverse
+   direction
+8. Repeat until satisfied.
+
+!> This ensures that **middleware priority is identical** regardless if your
+peer is sending or receiving feeds.
+
+OLD DOCS
+========
 **TLDR;**
 > `resolve` and `accept` = First to Last
 >

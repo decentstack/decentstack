@@ -1,9 +1,11 @@
 const { EventEmitter } = require('events')
 const assert = require('assert')
 const debug = require('debug')('replic8')
-const { isCore, isKey, assertCore, hexkey } = require('./lib/util')
+const { isCore, isKey, canReady, assertCore, hexkey } = require('./lib/util')
 const PeerConnection = require('./lib/peer-connection.js')
 const substream = require('hypercore-protocol-substream')
+const { defer, infer } = require('deferinfer')
+
 const {
   EXCHANGE,
   STATE_ACTIVE,
@@ -12,7 +14,7 @@ const {
 
 const UNSHARED = '__UNSHARED__'
 
-class Replic8 extends EventEmitter {
+class Decentstack extends EventEmitter {
   constructor (encryptionKey, opts = {}) {
     super()
     if (typeof encryptionKey === 'string') encryptionKey = Buffer.from(encryptionKey, 'hex')
@@ -131,16 +133,20 @@ class Replic8 extends EventEmitter {
     })
   }
 
-  collectShares (namespace, cb) {
+  _collectShares (namespace, cb) {
     const result = []
     this.iterateStack(namespace, 'share', true, (err, app, next) => {
       if (err) return cb(err)
       app.share((err, keysOrFeeds) => {
         if (err) return next(err)
+        // Also accept single core or key
+        if (isCore(keysOrFeeds) || isKey(keysOrFeeds)) keysOrFeeds = [keysOrFeeds]
+
         if (Array.isArray(keysOrFeeds)) {
-          keysOrFeeds.forEach(kf => {
-            if (isCore(kf) || isKey(kf)) result.push(kf)
-          })
+          debugger
+          for (const kf of keysOrFeeds) {
+            if (isKey(kf) || isCore(kf)) result.push(kf)
+          }
         }
         next()
       })
@@ -153,7 +159,7 @@ class Replic8 extends EventEmitter {
   collectMeta (namespace, keyOrFeed, cb) {
     let core = isCore(keyOrFeed) ? keyOrFeed : null
     const key = hexkey(keyOrFeed)
-    if (!key) return cb(new Error(`Unsupported object encountered during collectMeta`))
+    if (!key) return cb(new Error('Unsupported object encountered during collectMeta'))
 
     const meta = {}
 
@@ -198,46 +204,45 @@ class Replic8 extends EventEmitter {
    * to skip the gathering key's step and create a manifest
    * based on the provides subset of keys.
    */
-  collectManifest (namespace, keys, cb) {
+  collectManifest (namespace = 'default', keys, cb) {
     if (typeof keys === 'function') return this.collectManifest(namespace, null, keys)
-    // Shared keys should be possible to unshared given meta
-    // Keys might need to be gathered, but gathering them might result
-    // smaller in a subset
-    // Meta needs to be gathered for each key as soon as key is available.
-    // Gathering keys and metadata in 1 sweep is highly problematic
-    // (the hen & egg & dinosaur -problem)
-    // Doing it as 3 different operations would've been optimal
-    // but that pollutes the middleware-api's simplicity
-    // 1. gather all shared keys
-    // 2. gather all metadata
-    // 3. unshare keys
-    // Let's try and combine metadata-gather + unshare.
-    const assembleManifest = (err, shares) => {
-      if (err) return cb(err)
-      const keys = []
-      const meta = []
-      let pending = shares.length
-      shares.forEach(fk => {
-        this.collectMeta(namespace, fk, (err, res) => {
-          if (err) return cb(err)
-          if (!res[UNSHARED]) {
-            keys.push(hexkey(fk))
-            meta.push(res)
-          }
+    if (typeof namespace === 'function') return this.collectManifest(undefined, null, namespace)
 
-          if (!--pending) {
-            if (!keys.length) return cb() // manifest is empty
-            else cb(null, { keys, meta })
-          }
+    const p = defer(async done => {
+      if (!Array.isArray(keys) || !keys.length) {
+        keys = await defer(d => this._collectShares(namespace, d))
+        debugger
+      }
+      
+      ////
+      const assembleManifest = (err, shares) => {
+        if (err) return done(err)
+        const keys = []
+        const meta = []
+        let pending = shares.length
+        shares.forEach(fk => {
+          this.collectMeta(namespace, fk, (err, res) => {
+            if (err) return done(err)
+            if (!res[UNSHARED]) {
+              keys.push(hexkey(fk))
+              meta.push(res)
+            }
+
+            if (!--pending) {
+              if (!keys.length) return done() // manifest is empty
+              else cb(null, { keys, meta })
+            }
+          })
         })
-      })
-    }
+      }
 
-    if (keys) {
-      assembleManifest(null, keys)
-    } else {
-      this.collectShares(namespace, assembleManifest)
-    }
+      if (keys) {
+        assembleManifest(null, keys)
+      } else {
+        return this._collectShares(namespace, assembleManifest)
+      }
+    })
+    return infer(p, cb)
   }
 
   /**
@@ -521,8 +526,8 @@ class Replic8 extends EventEmitter {
 }
 
 module.exports = function (...args) {
-  return new Replic8(...args)
+  return new Decentstack(...args)
 }
 
-module.exports.Replic8 = Replic8
+module.exports.Decentstack = Decentstack
 module.exports.PeerConnection = PeerConnection
