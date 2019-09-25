@@ -21,18 +21,19 @@ const stack = new Decentstack(key, opts)
 
 ### Function: snapshot
 
-`snapshot([namespace], [keys], [callback])`
+`snapshot (namespace = 'default', [keys], [callback])`
 
 **Arguments**
 
 - *optional* `{string} namespace` default: `'default'`
 - *optional* `{Array} keys` limits snapshot to specified keys
-- *optional* `{Function} callback` node style callback
+- *optional* `{Function} callback` node style callback `(error, snapshot)`
 
 **Returns**
-- `{Promise} snapshot`
-  - `{Array} keys` shared keys
-  - `{Array} meta` decorated metadata
+- `{Promise<Object>} snapshot`
+  - `{Array} keys` shared keys as hex-strings
+  - `{Array} meta` decorated metadata, array is same length as `keys` and mapped
+    by index.
 
 **Description**
 
@@ -41,14 +42,37 @@ iterates through the stack invoking `share`, `decorate` and `hold`
 methods on middleware returns a promise of a snapshot
 
 ```js
+// Promise style
 const snapshot = await stack.snapshot()
 console.log('My stack currently shares', snapshot)
 
-stack.snapshot('media', (error, snapshot) => {
+// Callback style
+stack.snapshot('media', (error, {keys, meta}) => {
   if (error) throw error
-  console.log('My stack currently shared media', snapshot)
+  for (const i = 0; i < keys.length; i++) {
+    console.log('Im sharing key:', keys[i], 'meta:', JSON.stringify(meta[i]))
+  }
 })
 ```
+
+### Function: collectMeta
+
+`collectMeta (keyOrFeed, namespace = 'default',  [callback])`
+
+**Arguments**
+
+- `{Object} keyOrFeed` Accepts either a key as a hexstring or `Buffer`, or
+  a core
+- *optional* `{string} namespace` default: `'default'`
+- _optional_ `{Function} callback` node style callback `(error, metadata)`
+
+**Returns**
+- `{Promise<Object>} metadata` the merged properties
+
+**Description**
+
+Queries the stack for a given namespace iterating through all middleware
+implementing the `describe` method, and returns the final merged properties.
 
 old
 ---

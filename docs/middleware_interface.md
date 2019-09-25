@@ -70,14 +70,21 @@ All callbacks are optional, an `Object` is considered **usable**
 | `close`               | reverse            | Notify application that the stack is being torn down              |
 
 ### share
-`share(function callback(next) { ... })`
+`share(next => { ... })`
 
 **Callback parameters**
 
-- `{Function} next(error, coresOrKeys)`
+- `{Function} next (error, coresOrKeys)`
   - `{Object} error` If passed, aborts stack iteration and causes
     `PeerConnection` to be dropped
-  - `{Array} coresOrKeys` A list of shared keys or cores
+  - `{Array} coresOrKeys` A list of shared `Buffer` keys or `Object` cores
+
+**Description**
+
+Offers cores for replication, typically implemented by storages
+that that hold cores.
+Cores shared at this point can be "unshared" using the
+`hold` callback.
 
 ```js
 const coreA = hypercore(storage)

@@ -1,6 +1,6 @@
 const { EventEmitter } = require('events')
 const assert = require('assert')
-const debug = require('debug')('replic8')
+const debug = require('debug')('decentstack')
 const { isCore, isKey, canReady, assertCore, hexkey } = require('./lib/util')
 const PeerConnection = require('./lib/peer-connection.js')
 const substream = require('hypercore-protocol-substream')
@@ -138,17 +138,24 @@ class Decentstack extends EventEmitter {
     this.iterateStack(namespace, 'share', true, (err, app, next) => {
       if (err) return cb(err)
       app.share((err, keysOrFeeds) => {
+        debug('middleware#share()', err, keysOrFeeds)
         if (err) return next(err)
-        // Also accept single core or key
-        if (isCore(keysOrFeeds) || isKey(keysOrFeeds)) keysOrFeeds = [keysOrFeeds]
+        const p = defer(async done => {
+          // Wait for ready if single readyable was passed
+          if (canReady(keysOrFeeds)) await defer(d => keysOrFeeds.ready(d))
 
-        if (Array.isArray(keysOrFeeds)) {
-          debugger
-          for (const kf of keysOrFeeds) {
-            if (isKey(kf) || isCore(kf)) result.push(kf)
+          // Also accept single core or key
+          if (isCore(keysOrFeeds) || isKey(keysOrFeeds)) keysOrFeeds = [keysOrFeeds]
+
+          if (Array.isArray(keysOrFeeds)) {
+            for (const kf of keysOrFeeds) {
+              if (canReady(kf)) await defer(d => kf.ready(d))
+              if (isKey(kf) || isCore(kf)) result.push(kf)
+            }
           }
-        }
-        next()
+          done()
+        })
+        infer(p, next)
       })
     }, err => {
       if (err) cb(err)
@@ -156,46 +163,44 @@ class Decentstack extends EventEmitter {
     })
   }
 
-  collectMeta (namespace, keyOrFeed, cb) {
-    let core = isCore(keyOrFeed) ? keyOrFeed : null
-    const key = hexkey(keyOrFeed)
-    if (!key) return cb(new Error('Unsupported object encountered during collectMeta'))
-
-    const meta = {}
-
-    const ctx = {
-      resolve (cb) {
-        if (core) return cb(null, core) // Shortcircuit
-        else {
-          return this.resolveFeed(key, namespace, (err, res) => {
-            if (err) return cb(err)
-            core = res // Save for later
-            cb(null, core)
+  collectMeta (keyOrFeed, namespace = 'default', cb) {
+    const p = defer(done => {
+      let core = isCore(keyOrFeed) ? keyOrFeed : null
+      const key = hexkey(keyOrFeed)
+      if (!key) return done(new Error('Unsupported object encountered during collectMeta'))
+      const meta = {}
+      const ctx = {
+        resolve (resolveCallback) {
+          const p = defer(done => {
+            if (core) return done(null, core) // Shortcircuit
+            else {
+              return this.resolveFeed(key, namespace, (err, res) => {
+                if (err) return done(err)
+                core = res // Save for later
+                done(null, core)
+              })
+            }
           })
-        }
-      },
-      key,
-      meta
-    }
-    ctx.resolve = ctx.resolve.bind(this)
+          return infer(p, resolveCallback)
+        },
+        key,
+        meta
+      }
+      ctx.resolve = ctx.resolve.bind(this)
 
-    this.iterateStack(namespace, 'describe', true, (err, app, next) => {
-      if (err) return cb(err)
-      app.describe(ctx, (err, m) => {
-        if (err) return next(err)
-        // TODO: calling `next(null, false)` for unsharing is
-        // not very intuitive, redesign this criteria
-        if (m === false) {
-          meta[UNSHARED] = true
-          return next(null, null, true) // abort loop, feed was unshared.
-        }
-        Object.assign(meta, m)
-        next()
+      this.iterateStack(namespace, 'describe', true, (err, app, next) => {
+        if (err) return done(err)
+        app.describe(ctx, (err, m) => {
+          if (err) return next(err)
+          Object.assign(meta, m)
+          next()
+        })
+      }, (err, r, f) => {
+        if (err) return done(err)
+        else return done(null, meta)
       })
-    }, (err, r, f) => {
-      if (err) return cb(err)
-      else return cb(null, meta)
     })
+    return infer(p, cb)
   }
 
   /** Queries middleware for keys and meta data
@@ -204,43 +209,27 @@ class Decentstack extends EventEmitter {
    * to skip the gathering key's step and create a manifest
    * based on the provides subset of keys.
    */
-  collectManifest (namespace = 'default', keys, cb) {
-    if (typeof keys === 'function') return this.collectManifest(namespace, null, keys)
-    if (typeof namespace === 'function') return this.collectManifest(undefined, null, namespace)
+  snapshot (namespace = 'default', shares, cb) {
+    if (typeof keys === 'function') return this.snapshot(namespace, null, shares)
+    if (typeof namespace === 'function') return this.snapshot(undefined, null, namespace)
 
     const p = defer(async done => {
-      if (!Array.isArray(keys) || !keys.length) {
-        keys = await defer(d => this._collectShares(namespace, d))
-        debugger
+      if (!Array.isArray(shares) || !shares.length) {
+        shares = await defer(d => this._collectShares(namespace, d))
       }
-      
-      ////
-      const assembleManifest = (err, shares) => {
-        if (err) return done(err)
-        const keys = []
-        const meta = []
-        let pending = shares.length
-        shares.forEach(fk => {
-          this.collectMeta(namespace, fk, (err, res) => {
-            if (err) return done(err)
-            if (!res[UNSHARED]) {
-              keys.push(hexkey(fk))
-              meta.push(res)
-            }
-
-            if (!--pending) {
-              if (!keys.length) return done() // manifest is empty
-              else cb(null, { keys, meta })
-            }
-          })
-        })
+      const keys = []
+      const meta = []
+      for (const fk of shares) {
+        try {
+          const res = await this.collectMeta(fk, namespace)
+          keys.push(hexkey(fk))
+          meta.push(res)
+        } catch (err) {
+          return done(err)
+        }
       }
-
-      if (keys) {
-        assembleManifest(null, keys)
-      } else {
-        return this._collectShares(namespace, assembleManifest)
-      }
+      if (!keys.length) return done() // manifest is empty
+      else done(null, { keys, meta })
     })
     return infer(p, cb)
   }
@@ -258,7 +247,7 @@ class Decentstack extends EventEmitter {
     let pending = this.namespaces.length
     let selected = {}
     this.namespaces.forEach(ns => {
-      this.collectManifest(ns, (err, manifest) => {
+      this.snapshot(ns, (err, manifest) => {
         // this is an indicator of faulty middleware
         // maybe even kill the process?
         if (err) {
@@ -335,6 +324,7 @@ class Decentstack extends EventEmitter {
     conn.on('feed', this._onFeedReplicated)
     return conn
   }
+
   _onConnectionStateChanged (state, prev, err, conn) {
     switch (state) {
       case STATE_ACTIVE:
@@ -349,7 +339,7 @@ class Decentstack extends EventEmitter {
               const resTime = (new Date()).getTime() - reqTime
               debug(`Remote response (${resTime}ms)`)
             } else {
-              console.warn(`Remote ignored our manifest`)
+              console.warn('Remote ignored our manifest')
             }
           })
         }
@@ -501,7 +491,7 @@ class Decentstack extends EventEmitter {
     // Each peer should be expected to always build up their own manifests an be responsible
     // for their own words to avoid wasting bandwidth and processing power on inaccurate advertisement.
     const namespace = conn.allowedKeysNS[key]
-    this.collectManifest(namespace, [key], (err, manifest) => {
+    this.snapshot(namespace, [key], (err, manifest) => {
       // this is an indicator of faulty middleware
       // maybe even kill the process?
       if (err) return conn.kill(err)
