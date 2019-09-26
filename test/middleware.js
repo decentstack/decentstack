@@ -1,14 +1,14 @@
 const test = require('tape')
 const RAM = require('random-access-memory')
 const hypercore = require('hypercore')
-const decentstack = require('..')
+const { Decentstack } = require('..')
 
-const key = Buffer.alloc(32)
-key.write('hello')
+const exchangeKey = Buffer.alloc(32)
+exchangeKey.write('hello')
 
 test('mounted', t => {
   t.plan(4)
-  const stack = decentstack(key)
+  const stack = new Decentstack(exchangeKey)
   stack.use('files', {
     mounted (ostack, namespace) {
       t.equal(stack, ostack, 'Outer mounted() invoked')
@@ -26,7 +26,7 @@ test('mounted', t => {
 
 test('share', async t => {
   t.plan(7)
-  const stack = decentstack(key)
+  const stack = new Decentstack(exchangeKey)
   const feed1 = hypercore(RAM)
   const feed2 = hypercore(RAM)
   let order = 0
@@ -53,7 +53,7 @@ test('share', async t => {
 
 test('decorate', async t => {
   t.plan(11)
-  const stack = decentstack(key)
+  const stack = new Decentstack(exchangeKey)
   const feed = hypercore(RAM)
   let order = 0
   stack.use({
@@ -90,7 +90,7 @@ test('decorate', async t => {
 
 test('hold', async t => {
   t.plan(9)
-  const stack = decentstack(key)
+  const stack = new Decentstack(exchangeKey)
   const feed = hypercore(RAM)
   let order = 0
 
@@ -128,8 +128,41 @@ test('hold', async t => {
   t.end()
 })
 
-test('reject')
+const makeTestStack = feeds => {
+  const stack = new Decentstack(exchangeKey)
+  let n = 0
+  stack.use({
+    share: next => next(null, feeds),
+    describe: (ctx, next) => next(null, { n: n++ })
+  })
+  return stack
+}
+
+test('reject', async t => {
+  t.plan(6)
+  const feed1 = hypercore(RAM)
+  const feed2 = hypercore(RAM)
+  const stack = makeTestStack([feed1, feed2])
+  let order = 0
+  stack.use({
+    reject ({ key, meta }, next) {
+      t.equal(order++ % 2, 0, 'First reject invoked')
+      next(null, meta.n)
+    }
+  })
+  stack.use({
+    reject ({ key, meta }, next) {
+      t.equal(order++, 1, 'Second reject invoked once')
+      t.notEqual(key, feed2.key.hexSlice(), 'Second feed should already have been filtered')
+      next()
+    }
+  })
+  const snapshot = await stack.snapshot().catch(t.error)
+  const accepted = await stack.accept(snapshot)
+  t.equal(accepted.length, 1, 'One core accepted')
+  t.equal(accepted[0], feed1.key.hexSlice(), 'Its the correct core')
+  t.end()
+})
+
 test('store')
 test('resolve')
-
-

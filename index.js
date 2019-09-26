@@ -212,8 +212,10 @@ class Decentstack extends EventEmitter {
    * based on the provides subset of keys.
    */
   snapshot (namespace = 'default', shares, cb) {
-    if (typeof keys === 'function') return this.snapshot(namespace, null, shares)
-    if (typeof namespace === 'function') return this.snapshot(undefined, null, namespace)
+    if (namespace && typeof namespace !== 'string') return this.snapshot(undefined, namespace, shares)
+    if (typeof shares === 'function') return this.snapshot(namespace, null, shares)
+
+    if (!this._middleware[namespace]) throw new Error(`Unknown namespace "${namespace}"`)
 
     const p = defer(async done => {
       if (!Array.isArray(shares) || !shares.length) {
@@ -428,51 +430,73 @@ class Decentstack extends EventEmitter {
     next(0, null)
   }
 
+  accept (namespace = 'default', snapshot, cb = null) {
+    if (namespace && typeof namespace !== 'string') return this.accept(undefined, namespace, snapshot)
+    if (!this._middleware[namespace]) throw new Error(`Unknown namespace "${namespace}"`)
+    debug('middlware#accept_process start, nkeys:', snapshot.keys.length)
+    const p = defer(done => {
+      const accepted = []
+      let pending = snapshot.keys.length
+
+      for (let i = 0; i < snapshot.keys.length; i++) {
+        debug('middleware#accept() start')
+        const key = snapshot.keys[i]
+        const meta = Object.freeze(snapshot.meta[i])
+
+        // Core resolve fn
+        let core = null
+        const resolveFun = (cb) => {
+          const resolvePromise = defer(resolveDone => {
+            if (core) return done(null, core) // Shortcircuit
+            else {
+              return this.resolveFeed(key, namespace, (err, res) => {
+                if (err) return cb(err)
+                core = res // Save for later
+                cb(null, core)
+              })
+            }
+          })
+          return infer(resolvePromise, cb)
+        }
+
+        this.iterateStack(namespace, 'reject', (err, app, next) => {
+          if (err) return done(err)
+          const ctx = {
+            key,
+            meta,
+            resolve: resolveFun
+          }
+
+          app.reject(ctx, (err, rejected) => {
+            if (err) return next(err)
+            if (rejected) next(null, true, true)
+            else next(null, false)
+          })
+        }, (err, wasRejected) => {
+          debug('middleware#accept() complete')
+          if (err) done(err)
+          if (!wasRejected[0]) accepted.push(key)
+          if (!--pending) done(null, accepted)
+        })
+      }
+    })
+    return infer(p, cb)
+  }
+
   _onManifestReceived ({ id, namespace, keys, headers }, conn) {
     if (!this._middleware[namespace]) {
-
       return console.warn(`Received manifest for unknown namespace "${namespace}"`)
     }
-
-    let pending = keys.length
-    const selected = []
-    // TODO: operates on single accept(key) at a time for the sake
-    // of simplicity, but might not be optimal.
-    keys.forEach(key => {
-      let core = null
-      const resolveFun = (cb) => {
-        if (core) return cb(null, core) // Shortcircuit
-        else {
-          return this.resolveFeed(key, namespace, (err, res) => {
-            if (err) return cb(err)
-            core = res // Save for later
-            cb(null, core)
-          })
-        }
-      }
-
-      this.iterateStack(namespace, 'accept', (err, app, next) => {
-        if (err) return conn.kill(err)
-        const ctx = {
-          key,
-          meta: headers[key], // TODO: Object.freeze() maybe?
-          resolve: resolveFun
-        }
-
-        app.accept(ctx, (err, accepted) => {
-          if (err) return next(err)
-          if (accepted === false) next(null, false, true) // tristate..
-          else next(null, accepted && key, accepted)      // tristate..
-        })
-      }, (err, accepted) => {
-        if (err) conn.kill(err)
-        if (accepted[0]) selected.push(key)
-        if (!--pending) {
-          conn.sendRequest(namespace, selected, id)
-          this._onReplicateRequest({ keys: selected, namespace }, conn)
-        }
+    // TODO Manufacture snapshot
+    debugger
+    this.accept(namespace, snapshot)
+      .then(accepted => {
+        // Request remote to start replicating accepted cores
+        conn.sendRequest(namespace, accepted, id)
+        // Start local replication of accepted cores
+        this._onReplicateRequest({ keys: accepted, namespace }, conn)
       })
-    })
+      .catch(err => conn.kill(err))
   }
 
   // Resolve and replicate
