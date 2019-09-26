@@ -74,6 +74,26 @@ stack.snapshot('media', (error, {keys, meta}) => {
 Queries the stack for a given namespace iterating through all middleware
 implementing the `describe` method, and returns the final merged properties.
 
+### Function: accept
+`accept (namespace = 'default', snapshot, [callback])`
+
+**Arguments**
+
+- *optional* `{string} namespace` default: `'default'`
+- `{Object} snapshot` a snapshot containing following keys:
+  - `{Array} keys` list of shared keys
+  - `{Array} meta` list of shared metadata, same length as `keys`
+- *optional* `{Function} callback` node style callback `(error, acceptedKeys)`
+
+**Returns**
+- `{Promise<Array>} acceptedKeys` list of hex-string keys that were accepted and
+  initialized on local peer
+
+**Description**
+
+Initiates the _Accept_ process, runs the list of keys through all middleware
+by invoking the `reject`, `store` methods.
+
 old
 ---
 

@@ -74,7 +74,7 @@ All callbacks are optional, an `Object` is considered **usable**
 
 **Callback parameters**
 
-- `{Function} next (error, coresOrKeys)`
+- `{Function} next (error, coresOrKeys)` Callback to notify the stack to proceed via:
   - `{Object} error` If passed, aborts stack iteration and causes
     `PeerConnection` to be dropped
   - `{Array} coresOrKeys` A list of shared `Buffer` keys or `Object` cores
@@ -86,6 +86,7 @@ that that hold cores.
 Cores shared at this point can be "unshared" using the
 `hold` callback.
 
+Example core owner sharing all cores:
 ```js
 const coreA = hypercore(storage)
 const coreB = hypercore(storage)
@@ -96,15 +97,15 @@ stack.use({
 })
 ```
 
-### decorate
-`decorate (context, next)`
+### describe
+`describe (context, next)`
 
 **Callback parameters**
 - `{Object} context` contains helper properties:
   - `{String} key` hex-string representation of the core-key
   - `{Object} meta` Metadata from previous middleware or empty hash
   - `{Function} resolve` Get the core described identified `key` (Promise|Callback)
-- `{Function} next (error, meta)`
+- `{Function} next (error, meta)` Callback to notify the stack to proceed via:
   - `{Object} error` If passed, aborts stack iteration and causes
     `PeerConnection` to be dropped
   - `{Object} meta` If passed, will be merged into current metadata.
@@ -114,16 +115,32 @@ stack.use({
 Second step of the _Share_ process, allows your middleware to attach metadata to the feed denoted by `key`
 
 The keys and values exposed here will be transmitted to the remote peer
-in order to let him apply pre-replicate selection logic.
+in order to let him apply selection logic _before_ replication is started.
 
+Example decorator that describes a feed's length:
 ```js
 stack.use({
-  async decorate({ key, meta, resolve }, next) {
+  async describe({ key, meta, resolve }, next) {
     const feed = await resolve().catch(next) // Always handle errors
 
     // choose wichever pattern you prefer
-    meta.foo = 'bar' // Either directly mutate the previous hash
+    meta.foo = 'bar' // Either directly mutate the meta hash
     next(null, { seq: feed.length }) // or let decentstack perform a merge
+  }
+})
+```
+
+A callback style "last active" decorator:
+```js
+stack.use({
+  describe ({ resolve }, next) {
+    resolve((err, core) => {
+      core.get(core.length - 1, (err, entry) => {
+        if (err) return next(err)
+
+        next(err, { updatedAt: entry.timestamp })
+      })
+    })
   }
 })
 ```
@@ -135,7 +152,7 @@ stack.use({
 - `{Object} context` contains helper properties:
   - `{String} key` hex-string representation of the core-key
   - `{Object} meta` __immutable__ Metadata, the sum of all decorations.
-- `{Function} next (error, unshare)`
+- `{Function} next (error, unshare)` Callback to notify the stack to proceed via:
   - `{Object} error` If passed, aborts stack iteration and causes
     `PeerConnection` to be dropped
   - `{boolean} unshare` If the value is `truthy` then this core will be removed from the offer.
@@ -145,11 +162,13 @@ stack.use({
 The third and last phase of the _Share_ process,
 allows middleware to remove a previously shared core from the offer.
 
-During the `describe` phase - `meta` should be populated with the properties you require to make a `hold` decision.
+During the `describe` phase; `meta` should be populated with the properties you require to make a `hold` decision.
+
+Example guard that prevents empty feeds from being shared:
 
 ```js
 stack.use({
-  decorate({ key, meta }, next) {
+  hold({ key, meta }, next) {
     if (meta.seq < 1) {
       next(null, true) // hold empty feeds
     } else {
@@ -158,6 +177,39 @@ stack.use({
   })
 })
 ```
+### reject
+
+`reject (context, next)`
+
+**Callback parameters**
+- `{Object} context` contains helper properties:
+  - `{String} key` hex-string representation of remotely shared the core-key
+  - `{Object} meta` remote peer's metadata.
+- `{Function} next (error, reject)` Callback to notify the stack to proceed via:
+  - `{Object} error` If passed, aborts stack iteration and causes
+    `PeerConnection` to be dropped
+  - `{boolean} reject` If the value is `truthy` then this core will be ignored
+  and not replicated.
+
+**Description**
+
+First action of the _Accept_ process, let's your middleware reject and filter
+out cores that have low value or low interest.
+
+!> If no middleware rejects the core after the whole stack has been iterated,
+then the core is considered _"Accepted"_ and will be replicated.
+
+Example filter that rejects cores that haven't been active for the past three months:
+
+```js
+stack.use({
+  reject ({ key, meta }, next) {
+    let threeMonths = 3 * 30 * 24 * 60 * 60 * 1000
+    next(null, meta.updatedAt > threeMonths) // Ignore stale cores
+  }
+})
+```
+
 
 ### mouted
 `mounted (stack, namespace)`
@@ -186,10 +238,10 @@ The diagram below illustrates the typical flow of callback invocation
 
 ![Middleware Lifecycle Diagram](./middleware_lifecycle.svg)
 
-**Note 1** share & accept processes might be repeated multiple times if the
+!> share & accept processes might be repeated multiple times if the
 replication session was initiated with option `live` set to `true`.
 
-**Note 2** The `resolve` callback might be invoked multiple times throughout the
+!> The `resolve` callback might be invoked multiple times throughout the
 lifecycle by other middleware, but the middleware-host will only invoke the
 callback when it needs resolve a core in order to `.replicate()`
 
