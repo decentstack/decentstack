@@ -1743,8 +1743,8 @@ hypercore-protocol@^7.1.0, hypercore-protocol@^7.1.1:
     timeout-refresh "^1.0.0"
 
 hypercore-protocol@mafintosh/hypercore-protocol#v7:
-  version "7.2.0"
-  resolved "https://codeload.github.com/mafintosh/hypercore-protocol/tar.gz/e62406773a0bdb9f784695bb639a67b0550fe97c"
+  version "7.3.0"
+  resolved "https://codeload.github.com/mafintosh/hypercore-protocol/tar.gz/2a120d2ea50274bedc3a39c6f8a52ad6b37c4108"
   dependencies:
     hypercore-crypto "^1.0.0"
     inspect-custom-symbol "^1.1.0"
