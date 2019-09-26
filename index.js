@@ -132,38 +132,6 @@ class Decentstack extends EventEmitter {
     return infer(p, cb)
   }
 
-  _collectShares (namespace, cb) {
-    debug('middleware#share() starting')
-    const result = []
-    this.iterateStack(namespace, 'share', true, (err, app, next) => {
-      if (err) return cb(err)
-      app.share((err, keysOrFeeds) => {
-        if (err) return next(err)
-        const p = defer(async done => {
-          // Wait for ready if single readyable was passed
-          if (canReady(keysOrFeeds)) await defer(d => keysOrFeeds.ready(d))
-
-          // Also accept single core or key
-          if (isCore(keysOrFeeds) || isKey(keysOrFeeds)) keysOrFeeds = [keysOrFeeds]
-
-          if (Array.isArray(keysOrFeeds)) {
-            for (const kf of keysOrFeeds) {
-              if (canReady(kf)) await defer(d => kf.ready(d))
-              if (isKey(kf) || isCore(kf)) result.push(kf)
-            }
-          }
-          done()
-        })
-        infer(p, next)
-      })
-    }, err => {
-
-      debug('middleware#share() complete')
-      if (err) cb(err)
-      else cb(null, result)
-    })
-  }
-
   collectMeta (keyOrFeed, namespace = 'default', cb) {
     debug('middleware#describe() starting')
     const p = defer(done => {
@@ -212,9 +180,9 @@ class Decentstack extends EventEmitter {
    * to skip the gathering key's step and create a manifest
    * based on the provides subset of keys.
    */
-  snapshot (namespace = 'default', shares, cb) {
-    if (namespace && typeof namespace !== 'string') return this.snapshot(undefined, namespace, shares)
-    if (typeof shares === 'function') return this.snapshot(namespace, null, shares)
+  snapshot (shares, namespace = 'default', cb) {
+    if (typeof shares === 'function') return this.snapshot(undefined, undefined, shares)
+    if (typeof namespace === 'function') return this.snapshot(shares, undefined, namespace)
 
     if (!this._middleware[namespace]) throw new Error(`Unknown namespace "${namespace}"`)
 
@@ -285,7 +253,7 @@ class Decentstack extends EventEmitter {
     let pending = this.namespaces.length
     const selected = {}
     this.namespaces.forEach(ns => {
-      this.snapshot(ns, (err, manifest) => {
+      this.snapshot((err, manifest) => {
         // this is an indicator of faulty middleware
         // maybe even kill the process?
         if (err) {
@@ -303,7 +271,7 @@ class Decentstack extends EventEmitter {
           selected[ns] = selectedFeeds
           if (!--pending) cb(null, selected)
         })
-      })
+      }, ns)
     })
   }
 
@@ -371,9 +339,11 @@ class Decentstack extends EventEmitter {
     next(0, null)
   }
 
-  accept (namespace = 'default', snapshot, cb = null) {
-    if (namespace && typeof namespace !== 'string') return this.accept(undefined, namespace, snapshot)
+  accept (snapshot, namespace = 'default', cb = null) {
+    if (typeof namespace === 'function') return this.accept(snapshot, undefined, namespace)
+
     if (!this._middleware[namespace]) throw new Error(`Unknown namespace "${namespace}"`)
+
     debug('middlware#accept_process start, nkeys:', snapshot.keys.length)
     const p = defer(done => {
       const rejectedIdx = []
@@ -430,8 +400,9 @@ class Decentstack extends EventEmitter {
   }
 
   // Invoke `store` on middleware, exposed for easier unit testing of middleware.
-  store (namespace = 'default', accepted, callback) {
-    if (namespace && typeof namespace !== 'string') return this.store(undefined, namespace, accepted)
+  store (accepted, namespace = 'default', callback) {
+    if (typeof namespace === 'function') return this.store(accepted, undefined, namespace)
+
     if (!this._middleware[namespace]) throw new Error(`Unknown namespace "${namespace}"`)
 
     debug('middlware#store start')
@@ -471,6 +442,38 @@ class Decentstack extends EventEmitter {
   }
 
   // ----------- Internal API --------------
+
+  _collectShares (namespace, cb) {
+    debug('middleware#share() starting')
+    const result = []
+    this.iterateStack(namespace, 'share', true, (err, app, next) => {
+      if (err) return cb(err)
+      app.share((err, keysOrFeeds) => {
+        if (err) return next(err)
+        const p = defer(async done => {
+          // Wait for ready if single readyable was passed
+          if (canReady(keysOrFeeds)) await defer(d => keysOrFeeds.ready(d))
+
+          // Also accept single core or key
+          if (isCore(keysOrFeeds) || isKey(keysOrFeeds)) keysOrFeeds = [keysOrFeeds]
+
+          if (Array.isArray(keysOrFeeds)) {
+            for (const kf of keysOrFeeds) {
+              if (canReady(kf)) await defer(d => kf.ready(d))
+              if (isKey(kf) || isCore(kf)) result.push(kf)
+            }
+          }
+          done()
+        })
+        infer(p, next)
+      })
+    }, err => {
+
+      debug('middleware#share() complete')
+      if (err) cb(err)
+      else cb(null, result)
+    })
+  }
 
   // Create an exchange stream
   _newExchangeStream (initiator, opts = {}) {
@@ -539,8 +542,8 @@ class Decentstack extends EventEmitter {
     }
     // TODO Manufacture snapshot
     debugger
-    this.accept(namespace, snapshot)
-      .then(accepted => this.store(namespace, accepted))
+    return this.accept(snapshot, namespace)
+      .then(accepted => this.store(accepted, namespace))
       .then(stored => {
         // Request remote to start replicating accepted cores
         conn.sendRequest(namespace, stored, id)
@@ -601,7 +604,7 @@ class Decentstack extends EventEmitter {
     // Each peer should be expected to always build up their own manifests an be responsible
     // for their own words to avoid wasting bandwidth and processing power on inaccurate advertisement.
     const namespace = conn.allowedKeysNS[key]
-    this.snapshot(namespace, [key], (err, manifest) => {
+    this.snapshot([key], namespace, (err, manifest) => {
       // this is an indicator of faulty middleware
       // maybe even kill the process?
       if (err) return conn.kill(err)

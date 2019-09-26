@@ -21,7 +21,7 @@ same time.
   - `{boolean} noTalk = false` turn off automatic exchange initiation on
     connect. When off, you have to initiate it manually with
     `stack.startConversation`
-  - `{boolean} useVirtual = false` Force all replication streams to be tunneled through virtual substreams (Use this only if you want to replicate non hypercore-protocol:v7 compatible datastructures) 
+  - `{boolean} useVirtual = false` Force all replication streams to be tunneled through virtual substreams (Use this only if you want to replicate non hypercore-protocol:v7 compatible datastructures)
   - TODO:
 
 **Description**
@@ -37,15 +37,52 @@ const stack = decentstack(key, opts)
 const { Decentstack } = require('decentstack')
 const stack = new Decentstack(key, opts)
 ```
+### Function: use
+`use (namespace = 'default', app)`
+
+**Argumments**
+
+- `{string} namespace = 'default'` Registers app in specified namespace
+- `{Object} app` An object implementing at least one [middleware
+  interface](/middleware_interface) method
+
+**Description**
+
+Appends middleware to the stack denoted by `namespace`.
+Decentstack can handle multiple stacks in parallell, if
+a single stack for some reason is unfeasible, then sort your
+middleware into separate namespaces.
+
+
+```js
+stack.use(myApp)  // Append 'myApp' using namespace 'default'
+stack.use('media', { ... }) // Append object to namespace 'media'
+stack.prepend(authFilter) // prepend an filter into `default` namespace
+
+stack.snapshot(console.log) // log your stack shares.
+```
+### Function: prepend
+`prepend (namespace = 'default', app)`
+
+**Argumments**
+
+- `{string} namespace = 'default'` Registers app in specified namespace
+- `{Object} app` An object implementing at least one [middleware
+  interface](/middleware_interface) method
+
+**Description**
+
+Same as `Decentstack#use()` except prepends your app to the beginning of the
+stack instead of appending it to the end.
 
 ### Function: snapshot
 
-`snapshot (namespace = 'default', [keys], [callback])`
+`snapshot ([keys], namespace = 'default', [callback])`
 
 **Arguments**
 
-- *optional* `{string} namespace` default: `'default'`
 - *optional* `{Array} keys` limits snapshot to specified keys
+- `{string} namespace = 'default'`
 - *optional* `{Function} callback` node style callback `(error, snapshot)`
 
 **Returns**
@@ -94,14 +131,14 @@ Queries the stack for a given namespace iterating through all middleware
 implementing the `describe` method, and returns the final merged properties.
 
 ### Function: accept
-`accept (namespace = 'default', snapshot, [callback])`
+`accept (snapshot, namespace = 'default', [callback])`
 
 **Arguments**
 
-- *optional* `{string} namespace` default: `'default'`
 - `{Object} snapshot` a snapshot containing following keys:
   - `{Array} keys` list of shared keys
   - `{Array} meta` list of shared metadata, same length as `keys`
+- `{string} namespace = 'default'`
 - *optional* `{Function} callback` node style callback `(error, acceptedKeys)`
 
 **Returns**
@@ -115,14 +152,14 @@ _Accept_ process
 
 ### Function: store
 
-`store (namespace = 'default', snapshot, [callback])`
+`store (snapshot, namespace = 'default', [callback])`
 
 **Arguments**
 
-- *optional* `{string} namespace` default: `'default'`
 - `{Object} snapshot` a snapshot containing following keys:
   - `{Array} keys` list of shared keys
   - `{Array} meta` list of shared metadata, same length as `keys`
+- `{string} namespace = 'default'`
 - *optional* `{Function} callback` node style callback `(error, storedKeys)`
 
 **Returns**
