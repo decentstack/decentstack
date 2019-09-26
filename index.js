@@ -435,7 +435,7 @@ class Decentstack extends EventEmitter {
     if (!this._middleware[namespace]) throw new Error(`Unknown namespace "${namespace}"`)
     debug('middlware#accept_process start, nkeys:', snapshot.keys.length)
     const p = defer(done => {
-      const accepted = []
+      const rejectedIdx = []
       let pending = snapshot.keys.length
 
       for (let i = 0; i < snapshot.keys.length; i++) {
@@ -475,12 +475,58 @@ class Decentstack extends EventEmitter {
         }, (err, wasRejected) => {
           debug('middleware#accept() complete')
           if (err) done(err)
-          if (!wasRejected[0]) accepted.push(key)
-          if (!--pending) done(null, accepted)
+          if (wasRejected[0]) rejectedIdx.push(i)
+          if (!--pending) done(null, { rejectedIdx, snapshot })
         })
       }
     })
+      .then(({ rejectedIdx, snapshot }) => {
+        const keys = snapshot.keys.filter((_, i) => rejectedIdx.indexOf(i) === -1)
+        const meta = snapshot.meta.filter((_, i) => rejectedIdx.indexOf(i) === -1)
+        return { keys, meta }
+      })
     return infer(p, cb)
+  }
+
+  // Invoke `store` on middleware, exposed for easier unit testing of middleware.
+  store (namespace = 'default', accepted, callback) {
+    if (namespace && typeof namespace !== 'string') return this.store(undefined, namespace, accepted)
+    if (!this._middleware[namespace]) throw new Error(`Unknown namespace "${namespace}"`)
+
+    debug('middlware#store start')
+    const p = defer(done => {
+      const stored = []
+      let pending = accepted.keys.length
+      for (let i = 0; i < accepted.keys.length; i++) {
+        const key = accepted.keys[i]
+        const meta = accepted.meta[i]
+
+        this.iterateStack(namespace, 'store', (err, app, next) => {
+          if (err) return next(err)
+          app.store({ key, meta }, (err, core) => {
+            if (err) return next(err)
+            // Ready up if posssible
+            if (canReady(core)) { // TODO: maybe remove the key asserting in isCore
+              core.ready(() => {
+                // Assert core, and correct key
+                if (isCore(core) && core.key.toString('hex') === key) {
+                  next(null, core, true) // Accept
+                }
+              })
+            } else next()
+          })
+        }, (err, res) => {
+          if (err) return done(err)
+
+          const core = res[0]
+          if (core) stored.push(key)
+
+          debug('middlware#store stop')
+          if (!--pending) done(null, stored)
+        })
+      }
+    })
+    return infer(p, callback)
   }
 
   _onManifestReceived ({ id, namespace, keys, headers }, conn) {
@@ -490,11 +536,12 @@ class Decentstack extends EventEmitter {
     // TODO Manufacture snapshot
     debugger
     this.accept(namespace, snapshot)
-      .then(accepted => {
+      .then(accepted => this.store(namespace, accepted))
+      .then(stored => {
         // Request remote to start replicating accepted cores
-        conn.sendRequest(namespace, accepted, id)
+        conn.sendRequest(namespace, stored, id)
         // Start local replication of accepted cores
-        this._onReplicateRequest({ keys: accepted, namespace }, conn)
+        this._onReplicateRequest({ keys: stored, namespace }, conn)
       })
       .catch(err => conn.kill(err))
   }

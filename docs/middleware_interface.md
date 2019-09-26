@@ -185,6 +185,8 @@ stack.use({
 - `{Object} context` contains helper properties:
   - `{String} key` hex-string representation of remotely shared the core-key
   - `{Object} meta` remote peer's metadata.
+  - `{Function} resolve` Attempts to find core locally, high probability of
+    throwing NotFound errors, make sure to handle them properly!
 - `{Function} next (error, reject)` Callback to notify the stack to proceed via:
   - `{Object} error` If passed, aborts stack iteration and causes
     `PeerConnection` to be dropped
@@ -210,6 +212,65 @@ stack.use({
 })
 ```
 
+### store
+
+`store (context, next)`
+
+**Callback parameters**
+- `{Object} context` contains the following helper properties:
+  - `{String} key` hex-string representation of remotely shared the core-key
+  - `{Object} meta` remote peer's metadata.
+- `{Function} next (error, resolve)` Callback to notify the stack to proceed via:
+  - `{Object} error` If passed, aborts stack iteration and causes
+    `PeerConnection` to be dropped
+  - `{Core} resolve` Pass the core instance if your middleware owns it.
+
+**Description**
+
+This is the second and last step of the _Accept_ process.
+The `store` callback let's your middleware claim core-keys and become their "owner".
+
+Once a list of accepted keys has been chosen, the key
+must be resolved to a local core reference, your middleware
+should prove that it owns a core by passing it to the `next` callback.
+
+If your middleware is interested in storing the key but dosen't
+currently have a core for it, then it should initialize a new core and pass the instance to the `next` callback.
+
+!> If your middleware implements `store` callback it should also implement `resolve` callback
+
+!> At least one `store` capable middleware in the stack **MUST** resolve a core
+in order for any replication to occur.
+
+!> The core should only ever exist in one store, if you keep the same key in
+multiple stores then the regular `resolve` helper will misbehave
+
+Example storage that stashes everything into non persitent hash:
+
+```js
+const RAM = require('random-access-memory')
+const hashStore = {}
+
+stack.use({
+  store ({ key, meta }, next) {
+    // Ignore cores that aren't hypertries
+    if (meta.type !== 'hypertrie') return next()
+
+    // Initialize if missing
+    if (!hashStore[key]) {
+      hashStore[key] = hypertrie(RAM, Buffer.from(key, 'hex'))
+    }
+
+    // Produce proof of ownership
+    next(null, hashStore[key])
+  }
+
+  // Provide a resolver
+  resolve: (key, next) => next(null, hashStore[key])
+  // Provide share capability
+  share: next => next(null, Object.keys(hashStore))
+})
+```
 
 ### mouted
 `mounted (stack, namespace)`

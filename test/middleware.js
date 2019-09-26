@@ -159,10 +159,36 @@ test('reject', async t => {
   })
   const snapshot = await stack.snapshot().catch(t.error)
   const accepted = await stack.accept(snapshot)
-  t.equal(accepted.length, 1, 'One core accepted')
-  t.equal(accepted[0], feed1.key.hexSlice(), 'Its the correct core')
+  t.equal(accepted.keys.length, 1, 'One core accepted')
+  t.equal(accepted.keys[0], feed1.key.hexSlice(), 'Its the correct core')
   t.end()
 })
 
-test('store')
+test('store', async t => {
+  t.plan(4)
+  const feed = hypercore(RAM)
+  const stack = makeTestStack([feed])
+  let order = 0
+  stack.use({
+    store (_, next) {
+      t.equal(++order, 1, 'First store called first')
+      next()
+    }
+  })
+
+  stack.use({
+    store ({ key, meta }, next) {
+      t.equal(++order, 2, 'Deepest store called last')
+      next(null, hypercore(RAM, key))
+    }
+  })
+  const snapshot = await stack.snapshot().catch(t.error)
+  const accepted = await stack.accept(snapshot).catch(t.error)
+  const stored = await stack.store(accepted).catch(t.error)
+
+  t.equal(stored.length, 1, 'One core stored')
+  t.equal(stored[0], feed.key.hexSlice(), 'Its the correct core')
+  t.end()
+})
+
 test('resolve')

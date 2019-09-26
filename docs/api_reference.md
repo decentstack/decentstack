@@ -2,14 +2,30 @@
 
 !> All public methods that involve an asynchroneous operation
 support both callback and promise invocation through [deferinfer]()
-Having said that, try to avoid using both the promise and the callback at the
-same time when invoking a method.
+Having said that, try to avoid using both promises and the callbacks at the
+same time.
 
 
 ## class `Decentstack`
 
 ### Constructor
-```
+`new Decentstack (exchangeKey, options = {})`
+
+**Arguments**
+- `{Buffer|string} exchangeKey` The public key that will be used to encrypt
+  echange the exchange channel
+- _optional_ `{Object} options` valid props are:
+  - `{boolean} live = false` stay open after first exchange finished and continue streaming
+    data
+  - `{boolean} useVirtual = false`
+  - `{boolean} noForward = true` Prevents cross peer feed forwarding events
+  - TODO:
+
+**Description**
+
+Initializes a new stack:
+
+```js
 // Factory style
 const decentstack = require('decentstack')
 const stack = decentstack(key, opts)
@@ -86,16 +102,37 @@ implementing the `describe` method, and returns the final merged properties.
 - *optional* `{Function} callback` node style callback `(error, acceptedKeys)`
 
 **Returns**
-- `{Promise<Array>} acceptedKeys` list of hex-string keys that were accepted and
-  initialized on local peer
+- `{Promise<Object>} accepted` snapshot after reject filters
 
 **Description**
 
-Initiates the _Accept_ process, runs the list of keys through all middleware
-by invoking the `reject`, `store` methods.
+Runs the list of keys through all middleware implementing the `reject` method.
+Useful to for unit-testing middleware, usually invoked when initiating the
+_Accept_ process
 
-old
----
+### Function: store
+
+`store (namespace = 'default', snapshot, [callback])`
+
+**Arguments**
+
+- *optional* `{string} namespace` default: `'default'`
+- `{Object} snapshot` a snapshot containing following keys:
+  - `{Array} keys` list of shared keys
+  - `{Array} meta` list of shared metadata, same length as `keys`
+- *optional* `{Function} callback` node style callback `(error, storedKeys)`
+
+**Returns**
+- `{Promise<Array>} storedKeys` keys in hex-string format referencing cores that
+  are locally stored and are guaranteed to be ready and `resolve`-able
+
+**Description**
+
+Runs the snapshot through all middleware implementing the `store` method.
+Useful to for unit-testing middleware, usually used internally during `Accept` phase
+
+
+# old docs
 
 #### `const stack = decentstack(encryptionKey, opts)`
 
