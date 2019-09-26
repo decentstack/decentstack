@@ -12,8 +12,6 @@ const {
   STATE_DEAD
 } = require('./lib/constants')
 
-const UNSHARED = '__UNSHARED__'
-
 class Decentstack extends EventEmitter {
   constructor (encryptionKey, opts = {}) {
     super()
@@ -134,11 +132,11 @@ class Decentstack extends EventEmitter {
   }
 
   _collectShares (namespace, cb) {
+    debug('middleware#share() starting')
     const result = []
     this.iterateStack(namespace, 'share', true, (err, app, next) => {
       if (err) return cb(err)
       app.share((err, keysOrFeeds) => {
-        debug('middleware#share()', err, keysOrFeeds)
         if (err) return next(err)
         const p = defer(async done => {
           // Wait for ready if single readyable was passed
@@ -158,12 +156,15 @@ class Decentstack extends EventEmitter {
         infer(p, next)
       })
     }, err => {
+
+      debug('middleware#share() complete')
       if (err) cb(err)
       else cb(null, result)
     })
   }
 
   collectMeta (keyOrFeed, namespace = 'default', cb) {
+    debug('middleware#describe() starting')
     const p = defer(done => {
       let core = isCore(keyOrFeed) ? keyOrFeed : null
       const key = hexkey(keyOrFeed)
@@ -196,6 +197,7 @@ class Decentstack extends EventEmitter {
           next()
         })
       }, (err, r, f) => {
+        debug('middleware#describe() complete')
         if (err) return done(err)
         else return done(null, meta)
       })
@@ -231,6 +233,39 @@ class Decentstack extends EventEmitter {
       if (!keys.length) return done() // manifest is empty
       else done(null, { keys, meta })
     })
+    // Invoke HOLD ware
+      .then(snapshot => {
+        debug('middleware#hold() starting')
+        return defer(done => {
+          const filterIdx = []
+          this.iterateStack(namespace, 'hold', true, (err, app, next) => {
+            if (err) return cb(err)
+
+            let pending = snapshot.keys.length
+
+            for (let i = 0; i < snapshot.keys.length; i++) {
+              // Wait wat, this needs to be run sequential or parallell?
+              const key = snapshot.keys[i]
+              const meta = Object.freeze(snapshot.meta[i])
+
+              app.hold({ key, meta }, (err, unshare) => {
+                if (err) return next(err)
+
+                if (unshare) filterIdx.push(i)
+
+                if (!--pending) next()
+              })
+            }
+          }, (err, res) => {
+            if (err) return done(err)
+            // Filter out all unshared cores
+            const keys = snapshot.keys.filter((_, i) => filterIdx.indexOf(i) === -1)
+            const meta = snapshot.meta.filter((_, i) => filterIdx.indexOf(i) === -1)
+            debug('middleware#hold() complete')
+            done(err, { keys, meta })
+          })
+        })
+      })
     return infer(p, cb)
   }
 
@@ -245,7 +280,7 @@ class Decentstack extends EventEmitter {
   startConversation (conn, cb) {
     assert(typeof cb === 'function', 'callback must be a function')
     let pending = this.namespaces.length
-    let selected = {}
+    const selected = {}
     this.namespaces.forEach(ns => {
       this.snapshot(ns, (err, manifest) => {
         // this is an indicator of faulty middleware

@@ -88,7 +88,46 @@ test('decorate', async t => {
   t.end()
 })
 
-test('hold')
+test('hold', async t => {
+  t.plan(9)
+  const stack = decentstack(key)
+  const feed = hypercore(RAM)
+  let order = 0
+
+  stack.use({
+    hold ({ key, meta }, next) {
+      t.equal(++order, 2)
+      t.equal(key, feed.key.hexSlice(), 'Key from other stack')
+      next(null, meta.seq === 0)
+    },
+
+    describe ({ meta }, next) {
+      t.pass('decorate()')
+      meta.seq = 0
+      next()
+    }
+  })
+
+  stack.use({
+    hold ({ meta }, next) {
+      t.pass('hold()')
+      t.equal(++order, 1)
+      t.equal(meta.seq, 0)
+      next()
+    },
+
+    share (next) {
+      t.pass('share()')
+      next(null, feed)
+    }
+  })
+
+  const { keys, meta } = await stack.snapshot().catch(t.error)
+  t.equal(keys.length, 0, 'Core unshared')
+  t.equal(meta.length, 0, 'meta also empty')
+  t.end()
+})
+
 test('reject')
 test('store')
 test('resolve')

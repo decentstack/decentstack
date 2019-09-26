@@ -104,26 +104,58 @@ stack.use({
   - `{String} key` hex-string representation of the core-key
   - `{Object} meta` Metadata from previous middleware or empty hash
   - `{Function} resolve` Get the core described identified `key` (Promise|Callback)
-- `{Function} next (error, coresOrKeys)`
+- `{Function} next (error, meta)`
   - `{Object} error` If passed, aborts stack iteration and causes
     `PeerConnection` to be dropped
   - `{Object} meta` If passed, will be merged into current metadata.
 
 **Description**
 
-Allows your middleware to attach metadata to the feed denoted by `key`
+Second step of the _Share_ process, allows your middleware to attach metadata to the feed denoted by `key`
 
 The keys and values exposed here will be transmitted to the remote peer
 in order to let him apply pre-replicate selection logic.
 
 ```js
 stack.use({
-  async decorate({key, meta, resolve}, next) {
+  async decorate({ key, meta, resolve }, next) {
     const feed = await resolve().catch(next) // Always handle errors
 
-    meta.foo = 'bar' // Either mutate the provided object
+    // choose wichever pattern you prefer
+    meta.foo = 'bar' // Either directly mutate the previous hash
     next(null, { seq: feed.length }) // or let decentstack perform a merge
   }
+})
+```
+
+### hold
+`hold (context, next)`
+
+**Callback parameters**
+- `{Object} context` contains helper properties:
+  - `{String} key` hex-string representation of the core-key
+  - `{Object} meta` __immutable__ Metadata, the sum of all decorations.
+- `{Function} next (error, unshare)`
+  - `{Object} error` If passed, aborts stack iteration and causes
+    `PeerConnection` to be dropped
+  - `{boolean} unshare` If the value is `truthy` then this core will be removed from the offer.
+
+**Description**
+
+The third and last phase of the _Share_ process,
+allows middleware to remove a previously shared core from the offer.
+
+During the `describe` phase - `meta` should be populated with the properties you require to make a `hold` decision.
+
+```js
+stack.use({
+  decorate({ key, meta }, next) {
+    if (meta.seq < 1) {
+      next(null, true) // hold empty feeds
+    } else {
+      next() // otherwise let the feed through
+    }
+  })
 })
 ```
 

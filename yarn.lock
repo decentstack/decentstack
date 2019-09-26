@@ -432,9 +432,9 @@ chokidar@^1.7.0:
     fsevents "^1.0.0"
 
 chownr@^1.1.1:
-  version "1.1.2"
-  resolved "https://registry.yarnpkg.com/chownr/-/chownr-1.1.2.tgz#a18f1e0b269c8a6a5d3c86eb298beb14c3dd7bf6"
-  integrity sha512-GkfeAQh+QNy3wquu9oIZr6SS5x7wGdSgNQvD10X3r+AZr1Oys22HW8kAmDMvNg2+Dm0TeGaEuO8gFwdBXxwO8A==
+  version "1.1.3"
+  resolved "https://registry.yarnpkg.com/chownr/-/chownr-1.1.3.tgz#42d837d5239688d55f303003a508230fa6727142"
+  integrity sha512-i70fVHhmV3DtTl6nqvZOnIjbY0Pe4kAUjwHj8z0zAdgBtYrJyYwLKCCuRBQ5ppkyL0AkN7HKRnETdmdp1zqNXw==
 
 ci-info@^1.5.0:
   version "1.6.0"
@@ -589,9 +589,9 @@ core-util-is@~1.0.0:
   integrity sha1-tf1UIgqivFq1eqtxQMlAdUUDwac=
 
 corestore@^4.0.3:
-  version "4.0.3"
-  resolved "https://registry.yarnpkg.com/corestore/-/corestore-4.0.3.tgz#c1c19b7b555cf6aa7185ff07bb796479ff1393e7"
-  integrity sha512-GrzEfH0CPlXQJH793Q8HTtakcAW8at/aCZhxvnbVTRgbct+BMUuRtbk8zpEGwYJ37nwZRhjpL7NLi4VxrpHc5Q==
+  version "4.0.4"
+  resolved "https://registry.yarnpkg.com/corestore/-/corestore-4.0.4.tgz#b43f257bcca1c06d0956ab9aba898ffb23013d72"
+  integrity sha512-MQ/uCUqDE1NnXoUGsvnTSqwbMD7LGSXq4du0Lbq4foqsLMr+pJ2d/Q9j3TyyoLo3lxHmWIlcORPaqoVtVOszcA==
   dependencies:
     call-me-maybe "^1.0.1"
     dat-encoding "^5.0.1"
@@ -924,9 +924,9 @@ encoding@^0.1.11:
     iconv-lite "~0.4.13"
 
 end-of-stream@^1.0.0, end-of-stream@^1.1.0, end-of-stream@^1.4.3:
-  version "1.4.3"
-  resolved "https://registry.yarnpkg.com/end-of-stream/-/end-of-stream-1.4.3.tgz#9db9861620e47283cd49513be9c344f339ec5153"
-  integrity sha512-cbNhPFS6MlYlWTGncSiDYbdqKhwWFy7kNeb1YSOG6K65i/wPTkLVCJQj0hXA4j0m5Da+hBWnqopEnu1FFelisQ==
+  version "1.4.4"
+  resolved "https://registry.yarnpkg.com/end-of-stream/-/end-of-stream-1.4.4.tgz#5ae64a5f45057baf3626ec14da0ca5e4b2431eb0"
+  integrity sha512-+uw1inIHVPQoaVuHzRyXd21icM+cnt4CzD5rW+NC1wjOUSTOs+Te7FOv7AhN7vS9x/oIyhLP5PR1H+phQAHu5Q==
   dependencies:
     once "^1.4.0"
 
@@ -1729,7 +1729,20 @@ hypercore-protocol@^6.12.0, hypercore-protocol@^6.5.0:
     sorted-indexof "^1.0.0"
     varint "^5.0.0"
 
-hypercore-protocol@^7.1.0, hypercore-protocol@^7.1.1, hypercore-protocol@mafintosh/hypercore-protocol#v7:
+hypercore-protocol@^7.1.0, hypercore-protocol@^7.1.1:
+  version "7.2.0"
+  resolved "https://registry.yarnpkg.com/hypercore-protocol/-/hypercore-protocol-7.2.0.tgz#6ecdb15c6809fe32113cbe5aafcddb480f119dbb"
+  integrity sha512-83MhTo2TNxXVHUzLiWimcyD6ZrN9VS3OA1oAVkRjn8RemdmP0m/OCdJTkpdjFdVD7i8tjirKOFgzvbtMniWocA==
+  dependencies:
+    hypercore-crypto "^1.0.0"
+    inspect-custom-symbol "^1.1.0"
+    nanoguard "^1.2.1"
+    pretty-hash "^1.0.1"
+    simple-hypercore-protocol "^1.1.2"
+    streamx "^2.1.0"
+    timeout-refresh "^1.0.0"
+
+hypercore-protocol@mafintosh/hypercore-protocol#v7:
   version "7.2.0"
   resolved "https://codeload.github.com/mafintosh/hypercore-protocol/tar.gz/e62406773a0bdb9f784695bb639a67b0550fe97c"
   dependencies:
@@ -2560,7 +2573,7 @@ mininet@^2.6.0:
     pump "^2.0.0"
     split2 "^2.2.0"
 
-minipass@^2.2.1, minipass@^2.6.0, minipass@^2.8.6:
+minipass@^2.6.0, minipass@^2.8.6:
   version "2.8.6"
   resolved "https://registry.yarnpkg.com/minipass/-/minipass-2.8.6.tgz#620d889ace26356391d010ecb9458749df9b6db5"
   integrity sha512-lFG7d6g3+/UaFDCOtqPiKAC9zngWWsQZl1g5q6gaONqrjq61SX2xFqXMleQiFVyDpYwa018E9hmlAFY22PCb+A==
@@ -2568,12 +2581,20 @@ minipass@^2.2.1, minipass@^2.6.0, minipass@^2.8.6:
     safe-buffer "^5.1.2"
     yallist "^3.0.0"
 
-minizlib@^1.2.1:
-  version "1.2.2"
-  resolved "https://registry.yarnpkg.com/minizlib/-/minizlib-1.2.2.tgz#6f0ccc82fa53e1bf2ff145f220d2da9fa6e3a166"
-  integrity sha512-hR3At21uSrsjjDTWrbu0IMLTpnkpv8IIMFDFaoz43Tmu4LkmAXfH44vNNzpTnf+OAQQCHrb91y/wc2J4x5XgSQ==
+minipass@^2.9.0:
+  version "2.9.0"
+  resolved "https://registry.yarnpkg.com/minipass/-/minipass-2.9.0.tgz#e713762e7d3e32fed803115cf93e04bca9fcc9a6"
+  integrity sha512-wxfUjg9WebH+CUDX/CdbRlh5SmfZiy/hpkxaRI16Y9W56Pa75sWgd/rvFilSgrauD9NyFymP/+JFV3KwzIsJeg==
   dependencies:
-    minipass "^2.2.1"
+    safe-buffer "^5.1.2"
+    yallist "^3.0.0"
+
+minizlib@^1.2.1:
+  version "1.3.1"
+  resolved "https://registry.yarnpkg.com/minizlib/-/minizlib-1.3.1.tgz#7335640a57f584320b4fcf41069082c442bc6bf7"
+  integrity sha512-8AgjrT7C8U/HQWM+02YJHLPh4BypAhc5pFddr0nCcowNy1Hj0hmKPMq9WkjBMn0rtUg3ia30MkCexdd1pTiTIA==
+  dependencies:
+    minipass "^2.9.0"
 
 mixin-deep@^1.2.0:
   version "1.3.2"
@@ -4218,9 +4239,9 @@ tapenet@^1.4.0:
     tape "^4.8.0"
 
 tar@^4:
-  version "4.4.12"
-  resolved "https://registry.yarnpkg.com/tar/-/tar-4.4.12.tgz#6a1275a870a782f92828e24d28fa6aa253193af7"
-  integrity sha512-4GwpJwdSjIHlUrWd/1yJrl63UqcqjJyVglgIwn4gcG+Lrp9TXpZ1ZRrGLIRBNqLTUvz6yoPJrX4B/MISxY/Ukg==
+  version "4.4.13"
+  resolved "https://registry.yarnpkg.com/tar/-/tar-4.4.13.tgz#43b364bc52888d555298637b10d60790254ab525"
+  integrity sha512-w2VwSrBoHa5BsSyH+KxEqeQBAllHhccyMFVHtGtdMpF4W7IRWfZjFiQceJPChOeTsSDVUpER2T8FA93pr0L+QA==
   dependencies:
     chownr "^1.1.1"
     fs-minipass "^1.2.5"
