@@ -17,8 +17,11 @@ same time.
 - _optional_ `{Object} options` valid props are:
   - `{boolean} live = false` stay open after first exchange finished and continue streaming
     data
-  - `{boolean} useVirtual = false`
-  - `{boolean} noForward = true` Prevents cross peer feed forwarding events
+
+  - `{boolean} noTalk = false` turn off automatic exchange initiation on
+    connect. When off, you have to initiate it manually with
+    `stack.startConversation`
+  - `{boolean} useVirtual = false` Force all replication streams to be tunneled through virtual substreams (Use this only if you want to replicate non hypercore-protocol:v7 compatible datastructures) 
   - TODO:
 
 **Description**

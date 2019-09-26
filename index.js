@@ -95,40 +95,41 @@ class Decentstack extends EventEmitter {
     return Object.keys(this._middleware)
   }
 
-  resolveFeed (key, namespace = 'default', cb) {
-    if (typeof namespace === 'function') return this.resolveFeed(key, undefined, namespace)
-    assert.strict.equal(typeof cb, 'function', 'Callback missing!')
-
-    if (Buffer.isBuffer(key)) key = key.hexSlice()
-
-    this.iterateStack(namespace, 'resolve', (err, app, next) => {
-      if (err) return cb(err)
-      app.resolve(key, (err, feed) => {
-        if (err) return next(err) // Abort search
-        if (!feed) return next()
-
-        // Feed is found
-        try {
-          if (typeof feed.ready !== 'function') return assertCore(feed)
-          feed.ready(() => {
-            assertCore(feed)
-            // TODO: It's not necessarily important that resolved 'key' matches feed
-            // key. You could in theory resolve a feed using a virtual name.
-            // Important part is that feed.discoveryKey matches one of the
-            // 'onRemoteReplicates' events.
-            // Which actually enables some interesting middleware patterns.
-            assert.strict.equal(feed.key.hexSlice(), key, 'Resolved feed key mismatch!')
-            next(null, feed, true)
-          })
-        } catch (err) {
-          next(err)
-        }
+  resolveFeed (namespace = 'default', key, cb) {
+    if (typeof key === 'function') return this.resolveFeed(undefined, namespace, key)
+    if (!key) return this.resolveFeed(undefined, namespace, cb) // this can cause string, 'default' to end up in 'key'
+    key = hexkey(key)
+    assert.strict(key, 'resolveFeed requires a "key" argument')
+    const p = defer(done => {
+      this.iterateStack(namespace, 'resolve', (err, app, next) => {
+        if (err) return done(err)
+        app.resolve(key, (err, feed) => {
+          if (err) return next(err) // Abort search
+          if (!feed) return next()
+          if (!canReady(feed)) return next() // dosen't quack like a datastructure.
+          // Feed is found
+          try {
+            feed.ready(() => {
+              assertCore(feed)
+              // TODO: It's not necessarily important that resolved 'key' matches feed
+              // key. You could in theory resolve a feed using a virtual name.
+              // Important part is that feed.discoveryKey matches one of the
+              // 'onRemoteReplicates' events.
+              // Which actually enables some interesting middleware patterns.
+              // assert.strict.equal(feed.key.hexSlice(), key, 'Resolved feed key mismatch!')
+              next(null, feed, true)
+            })
+          } catch (err) {
+            next(err)
+          }
+        })
+      }, (err, res) => {
+        if (err) return done(err)
+        // else if (!res.length) return cb(new Error('FeedNotResolvedError,  ' + key))
+        else return done(null, res[0])
       })
-    }, (err, res) => {
-      if (err) return cb(err)
-      // else if (!res.length) return cb(new Error('FeedNotResolvedError,  ' + key))
-      else return cb(null, res[0])
     })
+    return infer(p, cb)
   }
 
   _collectShares (namespace, cb) {
@@ -175,7 +176,7 @@ class Decentstack extends EventEmitter {
           const p = defer(done => {
             if (core) return done(null, core) // Shortcircuit
             else {
-              return this.resolveFeed(key, namespace, (err, res) => {
+              return this.resolveFeed(namespace, key, (err, res) => {
                 if (err) return done(err)
                 core = res // Save for later
                 done(null, core)
@@ -315,86 +316,26 @@ class Decentstack extends EventEmitter {
    */
   close (err, cb = null) {
     if (typeof err === 'function') this.close(null, err)
-    if (typeof cb === 'function') this.once('close', cb)
-
-    for (const conn of this.connections) {
-      conn.kill(err)
-    }
-
-    for (const ns of this.namespaces) {
-      const snapshot = [...this._middleware[ns]]
-      for (const ware of snapshot) {
-        // notify subscribing middleware
-        if (typeof ware.close === 'function') {
-          ware.close()
-        }
-        // remove middlware from the stack
-        this._middleware[ns].splice(this._middleware[ns].indexOf(ware), 1)
+    const p = defer(done => {
+      for (const conn of this.connections) {
+        conn.kill(err)
       }
-    }
-    this.emit('close', err)
-  }
-  // ----------- Internal API --------------
 
-  // Create an exchange stream
-  _newExchangeStream (initiator, opts = {}) {
-    if (!opts.extensions) opts.extensions = []
-    const extensions = [...this.extensions, ...opts.extensions]
-
-    const mergedOpts = Object.assign(
-      {},
-      this.protocolOpts,
-      opts,
-      { extensions }
-    )
-    // TODO:  filter mergedOpts to only allow
-    // live
-    // download
-    // upload
-    // encrypt
-    // stream
-    const conn = new PeerConnection(initiator, this.encryptionKey, mergedOpts)
-    this.connections.push(conn)
-    conn.on('state-change', this._onConnectionStateChanged)
-    conn.on('manifest', this._onManifestReceived)
-    conn.on('replicate', this._onReplicateRequest)
-    conn.on('feed', this._onFeedReplicated)
-    return conn
-  }
-
-  _onConnectionStateChanged (state, prev, err, conn) {
-    switch (state) {
-      case STATE_ACTIVE:
-        // Check if manual conversation initiation requested
-        if (!this.opts.noTalk) {
-          const reqTime = (new Date()).getTime()
-          this.startConversation(conn, (err, selectedFeeds) => {
-            // Getting requests for all automatically sent manifests is not
-            // mandatory in this stage, we're only using this callback for local statistics.
-            if (err && err.type !== 'ManifestResponseTimedOutError') return conn.kill(err)
-            else if (!err) {
-              const resTime = (new Date()).getTime() - reqTime
-              debug(`Remote response (${resTime}ms)`)
-            } else {
-              console.warn('Remote ignored our manifest')
-            }
-          })
+      for (const ns of this.namespaces) {
+        const snapshot = [...this._middleware[ns]]
+        for (const ware of snapshot) {
+          // notify subscribing middleware
+          if (typeof ware.close === 'function') {
+            ware.close()
+          }
+          // remove middlware from the stack
+          this._middleware[ns].splice(this._middleware[ns].indexOf(ware), 1)
         }
-        this.emit('connect', conn)
-        break
-      case STATE_DEAD:
-        // cleanup up
-        conn.removeListener('state-changed', this._onConnectionStateChanged)
-        conn.removeListener('manifest', this._onManifestReceived)
-        conn.removeListener('replicate', this._onReplicateRequest)
-        conn.removeListener('feed', this._onFeedReplicated)
-        this.connections.splice(this.connections.indexOf(conn), 1)
-        this.emit('disconnect', err, conn)
-        if (conn.lastError) {
-          this.emit('error', conn.lastError, conn)
-        }
-        break
-    }
+      }
+      this.emit('close', err)
+      done()
+    })
+    return infer(p, cb)
   }
 
   /*
@@ -449,7 +390,7 @@ class Decentstack extends EventEmitter {
           const resolvePromise = defer(resolveDone => {
             if (core) return done(null, core) // Shortcircuit
             else {
-              return this.resolveFeed(key, namespace, (err, res) => {
+              return this.resolveFeed(namespace, key, (err, res) => {
                 if (err) return cb(err)
                 core = res // Save for later
                 cb(null, core)
@@ -529,6 +470,69 @@ class Decentstack extends EventEmitter {
     return infer(p, callback)
   }
 
+  // ----------- Internal API --------------
+
+  // Create an exchange stream
+  _newExchangeStream (initiator, opts = {}) {
+    if (!opts.extensions) opts.extensions = []
+    const extensions = [...this.extensions, ...opts.extensions]
+
+    const mergedOpts = Object.assign(
+      {},
+      this.protocolOpts,
+      opts,
+      { extensions }
+    )
+    // TODO:  filter mergedOpts to only allow
+    // live
+    // download
+    // upload
+    // encrypt
+    // stream
+    const conn = new PeerConnection(initiator, this.encryptionKey, mergedOpts)
+    this.connections.push(conn)
+    conn.on('state-change', this._onConnectionStateChanged)
+    conn.on('manifest', this._onManifestReceived)
+    conn.on('replicate', this._onReplicateRequest)
+    conn.on('feed', this._onFeedReplicated)
+    return conn
+  }
+
+  _onConnectionStateChanged (state, prev, err, conn) {
+    switch (state) {
+      case STATE_ACTIVE:
+        // Check if manual conversation initiation requested
+        if (!this.opts.noTalk) {
+          const reqTime = (new Date()).getTime()
+          this.startConversation(conn, (err, selectedFeeds) => {
+            // Getting requests for all automatically sent manifests is not
+            // mandatory in this stage, we're only using this callback for local statistics.
+            if (err && err.type !== 'ManifestResponseTimedOutError') return conn.kill(err)
+            else if (!err) {
+              const resTime = (new Date()).getTime() - reqTime
+              debug(`Remote response (${resTime}ms)`)
+            } else {
+              console.warn('Remote ignored our manifest')
+            }
+          })
+        }
+        this.emit('connect', conn)
+        break
+      case STATE_DEAD:
+        // cleanup up
+        conn.removeListener('state-changed', this._onConnectionStateChanged)
+        conn.removeListener('manifest', this._onManifestReceived)
+        conn.removeListener('replicate', this._onReplicateRequest)
+        conn.removeListener('feed', this._onFeedReplicated)
+        this.connections.splice(this.connections.indexOf(conn), 1)
+        this.emit('disconnect', err, conn)
+        if (conn.lastError) {
+          this.emit('error', conn.lastError, conn)
+        }
+        break
+    }
+  }
+
   _onManifestReceived ({ id, namespace, keys, headers }, conn) {
     if (!this._middleware[namespace]) {
       return console.warn(`Received manifest for unknown namespace "${namespace}"`)
@@ -550,7 +554,7 @@ class Decentstack extends EventEmitter {
   _onReplicateRequest ({ keys, namespace }, conn) {
     keys.forEach(key => {
       if (conn.isActive(key)) return
-      this.resolveFeed(key, namespace, (err, feed) => {
+      this.resolveFeed(namespace, key, (err, feed) => {
         if (err) return conn.kill(err)
         // Both local initiative and remote request race
         // to saturate the stream with desired feeds.

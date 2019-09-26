@@ -2,6 +2,7 @@ const test = require('tape')
 const RAM = require('random-access-memory')
 const hypercore = require('hypercore')
 const { Decentstack } = require('..')
+const { defer } = require('deferinfer')
 
 const exchangeKey = Buffer.alloc(32)
 exchangeKey.write('hello')
@@ -191,4 +192,46 @@ test('store', async t => {
   t.end()
 })
 
-test('resolve')
+test('resolve', async t => {
+  t.plan(6)
+  const feed = hypercore(RAM)
+  const stack = new Decentstack(exchangeKey)
+  stack.use({
+    share: next => next(null, feed),
+    resolve (key, next) {
+      t.pass('Resolve called')
+      t.equal(typeof key, 'string', 'Key is a string')
+      // t.equal(key, feed.key.hexSlice(), 'Expeceted key')
+      const r = key === feed.key.hexSlice() ? feed : null
+      next(null, r)
+    }
+  })
+  // const snapshot = await stack.snapshot().catch(t.error)
+  await defer(done => feed.ready(done))
+  const r = await stack.resolveFeed(feed.key).catch(t.error)
+  t.equal(r, feed, 'Feed resolved')
+  // Test not finding something.
+  const notFound = await stack.resolveFeed(feed.discoveryKey).catch(t.error)
+  // This is subject to change.
+  t.equal(typeof notFound, 'undefined', 'Not found is undefind')
+  t.end()
+})
+
+test('close', t => {
+  t.plan(2)
+  const stack = new Decentstack(exchangeKey)
+
+  stack.use({
+    close () {
+      t.pass('close() 1 invoked')
+    }
+  })
+
+  stack.use({
+    close () {
+      t.pass('close() 2 invoked')
+    }
+  })
+
+  stack.close(t.end)
+})

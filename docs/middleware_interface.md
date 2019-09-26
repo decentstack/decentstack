@@ -248,6 +248,7 @@ multiple stores then the regular `resolve` helper will misbehave
 Example storage that stashes everything into non persitent hash:
 
 ```js
+const hypertrie = require('hypertrie')
 const RAM = require('random-access-memory')
 const hashStore = {}
 
@@ -267,10 +268,30 @@ stack.use({
 
   // Provide a resolver
   resolve: (key, next) => next(null, hashStore[key])
+
   // Provide share capability
   share: next => next(null, Object.keys(hashStore))
 })
 ```
+
+### resolve
+
+`resolve (key, next)`
+
+**Callback parameters**
+- `{String} key` hex-string key (Subject to change!)
+- `{Function} next (error, resolve)` Callback to notify the stack to proceed via:
+  - `{Object} error` If passed, aborts stack iteration
+  - `{Core} resolve` Pass the core instance if your middleware owns it.
+
+**Description**
+
+Resolve key to core instance.
+It is similar to `store` except it should never cause cores to be created.
+If you middleware owns the key then call `next` with a reference to the
+instance.
+
+Please refer to the `store` example that also demonstrates the resolve callback.
 
 ### mouted
 `mounted (stack, namespace)`
@@ -292,6 +313,21 @@ stack.use({
   }
 })
 ```
+
+### close
+`close ()`
+
+**Callback parameters**
+
+`no parameters`
+
+Description
+
+When the stack itself is being closed using the  `stack#close()` method.
+It will first ask all middleware to close.
+
+!> As a rule of thumb, if you instantiate anything during `mounted` then
+implement the `close` function to deallocate instantiated resources.
 
 ## Lifecycle
 
