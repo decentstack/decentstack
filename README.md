@@ -1,9 +1,16 @@
-decentstack
+decentstack 
 =================
+[![Build Status](https://travis-ci.org/decentstack/decentstack.svg?branch=master)](https://travis-ci.org/decentstack/decentstack)
 
-### These docs are outdated, new ones are being written!
+### These docs are outdated, new ones are being written! 
+
+> (2109-10-27 Still being written, thanks for checking in)
+
 Meanwhile check the announcement to see where this project is headed:
 https://github.com/decentstack/decentstack/issues/2
+
+
+# outdated information below
 
 > Replication manager for [hypercore](mafintosh/hypercore) & [hypercoreprotocol](mafintosh/hypercore-protocol) compatible data-structures.
 
