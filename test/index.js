@@ -238,7 +238,7 @@ test.skip('Core type decorator', t => {
   })
 })
 
-test.only('Live feed forwarding', t => {
+test('Live feed forwarding', t => {
   t.plan(13)
   setup('one', p1 => {
     setup('two', p2 => {
