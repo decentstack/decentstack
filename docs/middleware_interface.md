@@ -54,25 +54,7 @@ standards, if you for any reason don't want to
 use Decentstack as a middleware host, it should be an ~~easy task~~ chore to implement
 your own middleware host using the specification below.
 
-
-## Callbacks
-All callbacks are optional, an `Object` is considered **usable**
- as long as it implements at least one of the methods listed below.
-
-
-| Core API              | Stack traversal    | Purpose                                                           |
-| :----------           | -----------------: | ---------                                                         |
-| `share`               | reverse            | Assemble list of cores                                            |
-| `describe`            | reverse            | Append metadata to outgoing advertisement                         |
-| `hold`                | reverse            | "Unshare" / prevent cores to be advertised to remote              |
-| `reject`              | forward            | Filter incoming advertisements & store cores                      |
-| `store`               | forward            | Provide `RandomAccess` storage for an accepted core               |
-| `resolve`             | reverse            | Find and return core by key                                       |  |
-| **Lifecycle Helpers** |                    |                                                                   |
-| `mounted`             | --                 | Notify application that it was included & let it bootstrap itself |
-| `close`               | reverse            | Notify application that the stack is being torn down              |
-
-### Complete Template
+## Complete Template
 
 ```js
 class NOOPApp {
@@ -112,6 +94,24 @@ class NOOPApp {
 
 stack.use(new NOOPApp())
 ```
+
+## Callbacks
+All callbacks are optional, an `Object` is considered **usable**
+ as long as it implements at least one of the methods listed below.
+
+
+| Core API              | Stack traversal    | Purpose                                                           |
+| :----------           | -----------------: | ---------                                                         |
+| `share`               | reverse            | Assemble list of cores                                            |
+| `describe`            | reverse            | Append metadata to outgoing advertisement                         |
+| `hold`                | reverse            | "Unshare" / prevent cores to be advertised to remote              |
+| `reject`              | forward            | Filter incoming advertisements & store cores                      |
+| `store`               | forward            | Provide `RandomAccess` storage for an accepted core               |
+| `resolve`             | reverse            | Find and return core by key                                       |  |
+| **Lifecycle Helpers** |                    |                                                                   |
+| `mounted`             | --                 | Notify application that it was included & let it bootstrap itself |
+| `close`               | reverse            | Notify application that the stack is being torn down              |
+
 ### share
 `share (next)`
 
@@ -497,10 +497,3 @@ Potential usecases:
  */
 ```
 
-## List of middleware
-
-Community maintained list, send a PR if you want to be included.
-
-* [Array storage](./examples/array-store.js) (needs it's own repo)
-* [CoreType decorator](./examples/type-decorator.js) (needs upgrade + own repo)
-* [corestore-replic8 adapter](./examples/replic8-corestore.js) (needs upgrade + own repo)

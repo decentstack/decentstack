@@ -10,8 +10,8 @@ const corestore = require('../examples/replic8-corestore')
 const typedecorator = require('../examples/type-decorator')
 const { encodeHeader } = typedecorator
 
-test.only('basic replication', async t => {
-  t.plan(94)
+test('basic replication', async t => {
+  t.plan(11)
   const encryptionKey = Buffer.alloc(32)
   encryptionKey.write('foo bars')
   const stack = decentstack(encryptionKey)
@@ -64,7 +64,6 @@ test.only('basic replication', async t => {
   // stream.pipe(stack.replicate()).pipe(stream)
 
   const finishUp = () => {
-    debugger
     t.equal(localStore.feeds.length, 4, 'All feeds available on local')
     t.equal(remoteStore.feeds.length, 4, 'All feeds available on remote')
     stack.close(t.end)
@@ -239,43 +238,53 @@ test.skip('Core type decorator', t => {
   })
 })
 
-test('regression: announce new feed on existing connections', t => {
-  t.plan(9)
+test.only('Live feed forwarding', t => {
+  t.plan(13)
   setup('one', p1 => {
     setup('two', p2 => {
       setup('three', p3 => {
         let feedsReplicated = 0
-        let conn1 = null
-        let conn2 = null
         p1.store.on('feed', feed => {
-          debugger
           feed.get(0, (err, data) => {
             t.error(err)
             switch (feedsReplicated++) {
-              case 0:
+              case 0: {
                 const f2 = p2.store.feeds[0]
                 t.equal(feed.key.toString('hex'), f2.key.toString('hex'), 'should see m2\'s writer')
                 t.equals(data.toString(), 'two', 'm2\'s writer should have been replicated')
                 break
-              case 1:
+              }
+              case 1: {
                 const f3 = p3.store.feeds[0]
                 t.equal(feed.key.toString('hex'), f3.key.toString('hex'), 'should see m3\'s writer')
                 t.equals(data.toString(), 'three', 'm3\'s writer should have been forwarded via m2')
-                conn1.stream.end()
-                conn2.stream.end()
-                t.end()
+                p1.stack.close()
+                p2.stack.close()
+                p3.stack.close()
                 break
+              }
               default:
                 t.ok(false, 'Only expected to see 2 feed events, got: ' + feedsReplicated)
             }
           })
         })
+        let pending = 3
 
+        const finishUp = err => {
+          t.error(err, `Stack gracefully closed #${pending}`)
+          if (--pending) return
+          t.pass('All 3 stacks closed')
+          t.end()
+        }
+
+        p1.stack.once('close', finishUp)
+        p2.stack.once('close', finishUp)
+        p3.stack.once('close', finishUp)
         // stack1 and stack2 are now live connected.
-        conn1 = p1.stack.handleConnection(true, p2.stack.replicate(false))
+        p1.stack.handleConnection(true, p2.stack.replicate(false))
 
         // When m3 is attached to m2, m2 should forward m3's writer to m1.
-        conn2 = p3.stack.handleConnection(false, p2.stack.replicate(true))
+        p3.stack.handleConnection(false, p2.stack.replicate(true))
       })
     })
   })

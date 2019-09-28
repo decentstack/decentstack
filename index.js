@@ -300,7 +300,7 @@ class Decentstack extends EventEmitter {
     if (typeof err === 'function') this.close(null, err)
     const p = defer(done => {
       for (const conn of this.connections) {
-        conn.kill(err)
+        conn.end(err)
       }
 
       for (const ns of this.namespaces) {

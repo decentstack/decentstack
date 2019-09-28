@@ -2,3 +2,4 @@
 - [Getting started](/getting_started.md)
 - [Middleware](/middleware_interface.md)
 - [API Reference](/api_reference.md)
+- [List of Middleware](/middleware_list.md)
