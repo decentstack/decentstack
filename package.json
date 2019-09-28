@@ -29,6 +29,8 @@
     "end-of-stream": "^1.4.3",
     "hypercore-protocol": "mafintosh/hypercore-protocol#v7",
     "hypercore-protocol-substream": "^2.0.7",
+    "nanoguard": "^1.2.1",
+    "pretty-hash": "^1.0.1",
     "protocol-buffers-encodings": "^1.1.0",
     "pump": "^3.0.0",
     "xxhashjs": "^0.2.2"

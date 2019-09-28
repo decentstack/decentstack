@@ -40,27 +40,22 @@ class ArrayStore extends EventEmitter {
     })
   }
 
-  // accept() call for stores is a bit different.
-  // It means that a core/feed has passed the entire stack
-  // and been approved for storage, thus if it reaches
-  // the store, it means that the store must initialize
-  // a new feed if it dosen't exist.
-  accept ({ key, meta, resolve }, next) {
-    resolve((err, feed) => {
+  store ({ key, meta }, next) {
+    this.resolve(key, (err, feed) => {
       if (err) return next(err)
       if (!feed) {
         feed = this.factory(this.storage, key)
         this.feeds.push(feed)
         this.emit('feed', feed)
       }
-      next(null, true)
+      next(null, feed)
     })
   }
 
   // Find feed by key in store if exists
   resolve (key, next) {
     this.readyFeeds(snapshot => {
-      let feed = snapshot.find(f => f.key.hexSlice() === key)
+      const feed = snapshot.find(f => f.key.hexSlice() === key)
       next(null, feed)
     })
   }

@@ -2,7 +2,7 @@ const test = require('tape')
 const hypercore = require('hypercore')
 const hyperdrive = require('hyperdrive')
 const ram = require('random-access-memory')
-const ReplicationManager = require('..')
+const decentstack = require('..')
 
 // examples
 const ArrayStore = require('../examples/array-store')
@@ -10,88 +10,28 @@ const corestore = require('../examples/replic8-corestore')
 const typedecorator = require('../examples/type-decorator')
 const { encodeHeader } = typedecorator
 
-test('The middleware interface', t => {
+test.only('basic replication', async t => {
   t.plan(94)
   const encryptionKey = Buffer.alloc(32)
   encryptionKey.write('foo bars')
-  const mgr = ReplicationManager(encryptionKey)
-  mgr.once('error', t.error)
-
-  // register test middleware first
-  let announceInvokes = 0
-  let acceptInvokes = 0
-  let resolveInvokes = 0
-  const timestamp = new Date().getTime()
-  mgr.use({
-    share (next) {
-      announceInvokes++
-      t.equal(typeof next, 'function', 'next is a function')
-      next()
-    },
-    describe ({ key, meta, resolve }, next) {
-      t.equal(typeof key, 'string', 'key is a hexstring')
-      t.equal(typeof meta, 'object', 'meta is object')
-      t.equal(typeof resolve, 'function', 'resolve is a function')
-      resolve((err, feed) => {
-        t.error(err)
-        t.ok(feed, 'Core resolved')
-        t.equal(feed.key.hexSlice(), key, 'Resolve function provides the core')
-        next(null, { timestamp })
-      })
-    },
-    accept ({ key, meta, resolve }, next) {
-      acceptInvokes++
-      t.equal(typeof key, 'string', 'key is a hexstring')
-      t.equal(typeof meta, 'object', 'meta is object')
-      t.equal(meta.origin, 'ArrayStore')
-      t.equal(typeof resolve, 'function', 'resolve is a function')
-      t.equal(typeof next, 'function', 'next is a function')
-      resolve((err, feed) => {
-        t.error(err)
-        t.ok(!feed, 'Resolve returns falsy on not yet available feeds')
-        next()
-      })
-    },
-    resolve (key, next) {
-      resolveInvokes++
-      t.equal(typeof key, 'string', 'key is a hexstring')
-      t.equal(typeof next, 'function', 'next is a function')
-      next() // test store dosen't resolve anything
-    },
-
-    mounted (m, namespace) {
-      t.equal(m, mgr, 'Correct manager was passed')
-      t.equal(namespace, 'default', 'Mounted was called with default namespace')
-    },
-
-    close () {
-      t.ok(true, '`close` was invoked')
-    }
-  })
+  const stack = decentstack(encryptionKey)
+  stack.once('error', t.error)
 
   // Register corestore as middleware
   // local has 3 feeds
   const localStore = new ArrayStore(ram, hypercore, 3)
-  mgr.use(localStore)
+  stack.use(localStore)
 
-  t.equal(mgr._middleware.default.length, 2, 'Stack contains two layers')
-  const remoteMgr = ReplicationManager(encryptionKey)
-  remoteMgr.once('error', t.error)
+  const remoteStack = decentstack(encryptionKey)
+  remoteStack.once('error', t.error)
 
   // Remote has 1 feed
   const remoteStore = new ArrayStore(ram, hypercore, 1)
-  remoteMgr.use({
-    accept ({ meta }, next) {
-      t.equal(meta.origin, 'ArrayStore', 'Remote sees from ArrayStore')
-      t.equal(meta.timestamp, timestamp, 'Remote sees timestamp')
-      next()
-    }
-  })
-  remoteMgr.use(remoteStore)
+  remoteStack.use(remoteStore)
 
   let imLast = false
-  remoteMgr.once('connection', conn => t.ok(conn, '"connection" event fired on remote'))
-  remoteMgr.once('disconnect', (err, conn) => {
+  remoteStack.once('connection', conn => t.ok(conn, '"connection" event fired on remote'))
+  remoteStack.once('disconnect', (err, conn) => {
     t.error(err)
     t.ok(conn, '"disconnect" event fired on remote')
     t.equal(conn.state, 'dead', 'Connection marked as dead')
@@ -101,8 +41,8 @@ test('The middleware interface', t => {
     else imLast = 'local'
   })
 
-  mgr.once('connection', conn => t.ok(conn, '"connection" event fired on local'))
-  mgr.once('disconnect', (err, conn) => {
+  stack.once('connection', conn => t.ok(conn, '"connection" event fired on local'))
+  stack.once('disconnect', (err, conn) => {
     t.error(err)
     t.ok(conn, '"disconnect" event fired on local')
     t.equal(conn.state, 'dead', 'Connection marked as dead')
@@ -113,25 +53,21 @@ test('The middleware interface', t => {
   })
 
   // Initialize a resverse stream
-  const stream = remoteMgr.replicate(true)
+  const stream = remoteStack.replicate(true)
 
   // Preferred connection handler
-  const connection = mgr.handleConnection(false, { stream })
+  const connection = stack.handleConnection(false, { stream })
   // stream.pipe(connection.stream).pipe(stream)
   t.ok(connection)
   // Also supported but not explored patterns includes:
-  // mgr.replicate({ stream })
-  // stream.pipe(mgr.replicate()).pipe(stream)
+  // stack.replicate({ stream })
+  // stream.pipe(stack.replicate()).pipe(stream)
 
   const finishUp = () => {
     debugger
     t.equal(localStore.feeds.length, 4, 'All feeds available on local')
     t.equal(remoteStore.feeds.length, 4, 'All feeds available on remote')
-
-    t.equal(announceInvokes, 1, 'Announce was invoked once')
-    t.equal(acceptInvokes, 1, 'Accept invoked once')
-    t.equal(resolveInvokes, 10, 'Resolve invoked 10 times')
-    mgr.close(t.end)
+    stack.close(t.end)
   }
 })
 
@@ -141,15 +77,15 @@ test.skip('Composite-core replication', t => {
   const encryptionKey = Buffer.alloc(32)
   encryptionKey.write('foo bars')
 
-  const mgr1 = ReplicationManager(encryptionKey)
-  mgr1.once('error', t.error)
+  const stack1 = decentstack(encryptionKey)
+  stack1.once('error', t.error)
   const store1 = new ArrayStore(ram, hyperdrive, 3)
-  mgr1.use(store1)
+  stack1.use(store1)
 
-  const mgr2 = ReplicationManager(encryptionKey)
-  mgr2.once('error', t.error)
+  const stack2 = decentstack(encryptionKey)
+  stack2.once('error', t.error)
   const store2 = new ArrayStore(ram, hyperdrive, 1)
-  mgr2.use(store2)
+  stack2.use(store2)
 
   store1.readyFeeds(snapshot => {
     const [ drive ] = snapshot
@@ -160,12 +96,12 @@ test.skip('Composite-core replication', t => {
       t.equal(drive.version, 2, 'Version 2')
       // console.log('Drive metadata:', drive.metadata.discoveryKey.hexSlice(0, 6))
       // console.log('Drive content:', drive.content.discoveryKey.hexSlice(0, 6))
-      mgr2.once('disconnect', (err, conn) => {
+      stack2.once('disconnect', (err, conn) => {
         t.error(err)
         t.ok(conn)
         t.error(conn.lastError)
       })
-      mgr1.once('disconnect', (err, conn) => {
+      stack1.once('disconnect', (err, conn) => {
         t.error(err)
         t.error(conn.lastError)
         const replDrive = store2.feeds.find(f => f.key.equals(drive.key))
@@ -179,7 +115,7 @@ test.skip('Composite-core replication', t => {
           t.end()
         })
       })
-      mgr1.handleConnection(true, mgr2.replicate(false))
+      stack1.handleConnection(true, stack2.replicate(false))
     })
   })
 })
@@ -189,19 +125,19 @@ test.skip('Corestore wrapper', t => {
   const encryptionKey = Buffer.alloc(32)
   encryptionKey.write('foo bars')
 
-  const mgr1 = ReplicationManager(encryptionKey)
-  mgr1.once('error', t.error)
+  const stack1 = decentstack(encryptionKey)
+  stack1.once('error', t.error)
 
   // init second core store and register with the first replication manager
   const store1 = corestore(ram)
-  mgr1.use(store1)
+  stack1.use(store1)
 
-  const mgr2 = ReplicationManager(encryptionKey)
-  mgr2.once('error', t.error)
+  const stack2 = decentstack(encryptionKey)
+  stack2.once('error', t.error)
 
   // init second core store and register with the second replication manager
   const store2 = corestore(ram)
-  mgr2.use(store2)
+  stack2.use(store2)
 
   const defCore = store1.default()
   const otherCore = store1.get()
@@ -209,9 +145,9 @@ test.skip('Corestore wrapper', t => {
   const msg1 = Buffer.from('This is the default core')
   const msg2 = Buffer.from('This is another core')
 
-  mgr2.once('disconnect', (err, conn) => {
+  stack2.once('disconnect', (err, conn) => {
     t.error(err)
-    t.ok(conn, 'mgr2 disconnected')
+    t.ok(conn, 'stack2 disconnected')
     t.error(conn.lastError)
 
     const replicatedDefCore = store2.get({ key: defCore.key })
@@ -226,7 +162,7 @@ test.skip('Corestore wrapper', t => {
         t.error(err)
         t.equals(msg2.toString(), data.toString(), 'Core2 and msg2 was replicated')
 
-        mgr2.resolveFeed(otherCore.key, (err, alternativeCore) => {
+        stack2.resolveFeed(otherCore.key, (err, alternativeCore) => {
           t.error(err)
           t.same(replicatedOther, alternativeCore)
           t.end()
@@ -242,7 +178,7 @@ test.skip('Corestore wrapper', t => {
         store1.get(otherCore.key)
         otherCore.append(msg2, err => {
           t.error(err)
-          mgr1.handleConnection(true, mgr2.replicate(false))
+          stack1.handleConnection(true, stack2.replicate(false))
         })
       })
     })
@@ -268,17 +204,17 @@ test.skip('Core type decorator', t => {
   const encryptionKey = Buffer.alloc(32)
   encryptionKey.write('types are useful')
 
-  const mgr1 = ReplicationManager(encryptionKey)
-  mgr1.once('error', t.error)
+  const stack1 = decentstack(encryptionKey)
+  stack1.once('error', t.error)
 
-  const mgr2 = ReplicationManager(encryptionKey)
-  mgr2.once('error', t.error)
+  const stack2 = decentstack(encryptionKey)
+  stack2.once('error', t.error)
 
-  mgr1.use(typedecorator)
-  mgr1.use(store1)
+  stack1.use(typedecorator)
+  stack1.use(store1)
 
   let tn = 0
-  mgr2.use({
+  stack2.use({
     accept ({ key, meta, resolve }, next) {
       t.equal(meta.headerType, expectedTypes[tn++])
       next()
@@ -294,7 +230,7 @@ test.skip('Core type decorator', t => {
 
     core.append(binhdr, err => {
       t.error(err)
-      const conn = mgr1.handleConnection(false, mgr2.replicate(true))
+      const conn = stack1.handleConnection(false, stack2.replicate(true))
       conn.once('end', err => {
         t.error(err)
         t.end()
@@ -335,11 +271,11 @@ test('regression: announce new feed on existing connections', t => {
           })
         })
 
-        // mgr1 and mgr2 are now live connected.
-        conn1 = p1.mgr.handleConnection(true, p2.mgr.replicate(false))
+        // stack1 and stack2 are now live connected.
+        conn1 = p1.stack.handleConnection(true, p2.stack.replicate(false))
 
         // When m3 is attached to m2, m2 should forward m3's writer to m1.
-        conn2 = p3.mgr.handleConnection(false, p2.mgr.replicate(true))
+        conn2 = p3.stack.handleConnection(false, p2.stack.replicate(true))
       })
     })
   })
@@ -347,12 +283,12 @@ test('regression: announce new feed on existing connections', t => {
   function setup (msg, cb) {
     const encryptionKey = Buffer.alloc(32)
     encryptionKey.write('forwarding is good')
-    const mgr = ReplicationManager(encryptionKey, { live: true })
-    mgr.once('error', t.error)
+    const stack = decentstack(encryptionKey, { live: true })
+    stack.once('error', t.error)
     const store = new ArrayStore(ram, hypercore, 1)
-    mgr.use(store, 'ArrayStore')
+    stack.use(store, 'ArrayStore')
     const feed = store.feeds[0]
-    const ret = { mgr, store, feed }
+    const ret = { stack, store, feed }
     feed.ready(() => {
       feed.append(msg, err => {
         t.error(err)

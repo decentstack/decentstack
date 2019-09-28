@@ -1,3 +1,24 @@
+/*
+  Decenststack - A decent application framework for decentralized services
+  Copyright (C) 2019  <Tony Ivanov>
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU Affero General Public License as published
+  by the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU Affero General Public License for more details.
+
+  You should have received a copy of the GNU Affero General Public License
+  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+  This license is a security measure to protect your service against malfunction,
+  if you belive that it is in conflict with your use-cases then please voice your concerns.
+*/
+
 const { EventEmitter } = require('events')
 const assert = require('assert')
 const debug = require('debug')('decentstack')
@@ -249,30 +270,23 @@ class Decentstack extends EventEmitter {
    * in our offer.
    */
   startConversation (conn, cb) {
-    assert(typeof cb === 'function', 'callback must be a function')
-    let pending = this.namespaces.length
-    const selected = {}
-    this.namespaces.forEach(ns => {
-      this.snapshot((err, manifest) => {
-        // this is an indicator of faulty middleware
-        // maybe even kill the process?
-        if (err) {
-          pending = -1
-          return cb(err)
-        }
-
-        if (!manifest) return cb() // empty manifest, return
-
-        conn.sendManifest(ns, manifest, (err, selectedFeeds) => {
-          if (err) {
-            pending = -1
-            cb(err)
-          }
-          selected[ns] = selectedFeeds
-          if (!--pending) cb(null, selected)
-        })
-      }, ns)
+    const p = defer(async done => {
+      const selected = {}
+      let pending = this.namespaces.length
+      for (const ns of this.namespaces) {
+        this.snapshot(ns)
+          .then(manifest => {
+            if (!manifest) return // empty manifest, return
+            return defer(sent => conn.sendManifest(ns, manifest, sent))
+          })
+          .then(selectedFeeds => {
+            if (selectedFeeds) selected[ns] = selectedFeeds
+            if (!--pending) done(null, selected)
+          })
+          .catch(done)
+      }
     })
+    return infer(p, cb)
   }
 
   /**
@@ -536,15 +550,14 @@ class Decentstack extends EventEmitter {
     }
   }
 
-  _onManifestReceived ({ id, namespace, keys, headers }, conn) {
+  _onManifestReceived ({ id, namespace, keys, meta }, conn) {
     if (!this._middleware[namespace]) {
       return console.warn(`Received manifest for unknown namespace "${namespace}"`)
     }
-    // TODO Manufacture snapshot
-    debugger
-    return this.accept(snapshot, namespace)
+    return this.accept({ keys, meta }, namespace)
       .then(accepted => this.store(accepted, namespace))
       .then(stored => {
+        // TODO: throw an error here
         // Request remote to start replicating accepted cores
         conn.sendRequest(namespace, stored, id)
         // Start local replication of accepted cores
