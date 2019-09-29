@@ -1,8 +1,9 @@
 [![Build Status](https://travis-ci.org/decentstack/decentstack.svg?branch=master)](https://travis-ci.org/decentstack/decentstack)
-[1.0 Announcement](https://github.com/decentstack/decentstack/issues/2)
 
 decentstack
 =================
+
+[1.0 Announcement](https://github.com/decentstack/decentstack/issues/2)
 
 ### Welcome!
 
@@ -17,7 +18,7 @@ If you're brave enough you there are some pre-release docs available:
 
 The quickstart instructions are not available yet, but I would recommend you to
 start with the excellent [kappa-workshop](https://noffle.github.io/kappa-arch-workshop/build/01.html). It's a great introduction to building decentralized applications that
-naievly exchange trust and a "must have" prequel to the issues which Decentstack attempts
+naievly exchange trust and a "must see" prequel to the issues which Decentstack attempts
 to address.
 
 ### Updates
@@ -83,5 +84,5 @@ stream.pipe(remoteStream).pipe(stream)
 
 This project is licensed under GNU AGPLv3
 
-If you have any concerns or conflicts with this license please open an issue and
-state your case.
+<sup>If you have any concerns or conflicts with this license please open an issue and
+state your case.</sup>
