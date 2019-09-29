@@ -2,11 +2,13 @@ const test = require('tape')
 const hypercore = require('hypercore')
 const hyperdrive = require('hyperdrive')
 const ram = require('random-access-memory')
+const { defer } = require('deferinfer')
 const decentstack = require('..')
 
 // examples
 const ArrayStore = require('../examples/array-store')
-const corestore = require('../examples/replic8-corestore')
+const Corestore = require('corestore')
+const wrapCorestore = require('../examples/corestore-wrapper')
 const typedecorator = require('../examples/type-decorator')
 const { encodeHeader } = typedecorator
 
@@ -70,56 +72,81 @@ test('basic replication', async t => {
   }
 })
 
-// Hyperdrive V10 does not support proto:v7 yet
-test.skip('Composite-core replication', t => {
-  t.plan(12)
-  const encryptionKey = Buffer.alloc(32)
-  encryptionKey.write('foo bars')
-
-  const stack1 = decentstack(encryptionKey)
-  stack1.once('error', t.error)
-  const store1 = new ArrayStore(ram, hyperdrive, 3)
-  stack1.use(store1)
-
-  const stack2 = decentstack(encryptionKey)
-  stack2.once('error', t.error)
-  const store2 = new ArrayStore(ram, hyperdrive, 1)
-  stack2.use(store2)
-
-  store1.readyFeeds(snapshot => {
-    const [ drive ] = snapshot
-    const message = Buffer.from('Cats are everywhere')
-    t.equal(drive.version, 1, 'Version 1')
-    drive.writeFile('README.md', message, err => {
-      t.error(err)
-      t.equal(drive.version, 2, 'Version 2')
-      // console.log('Drive metadata:', drive.metadata.discoveryKey.hexSlice(0, 6))
-      // console.log('Drive content:', drive.content.discoveryKey.hexSlice(0, 6))
-      stack2.once('disconnect', (err, conn) => {
-        t.error(err)
-        t.ok(conn)
-        t.error(conn.lastError)
-      })
-      stack1.once('disconnect', (err, conn) => {
-        t.error(err)
-        t.error(conn.lastError)
-        const replDrive = store2.feeds.find(f => f.key.equals(drive.key))
-        t.ok(replDrive, 'drive should have been replicated')
-        t.ok(replDrive.content, 'content should have been replicated')
-
-        t.equal(replDrive.version, 1, 'should also be on version 1')
-        replDrive.readFile('README.md', (err, res) => {
-          t.error(err)
-          // message
-          t.end()
+test('Basic: Live feed forwarding', t => {
+  t.plan(13)
+  setup('one', p1 => {
+    setup('two', p2 => {
+      setup('three', p3 => {
+        let feedsReplicated = 0
+        p1.store.on('feed', feed => {
+          feed.get(0, (err, data) => {
+            t.error(err)
+            switch (feedsReplicated++) {
+              case 0: {
+                const f2 = p2.store.feeds[0]
+                t.equal(feed.key.toString('hex'), f2.key.toString('hex'), 'should see m2\'s writer')
+                t.equals(data.toString(), 'two', 'm2\'s writer should have been replicated')
+                break
+              }
+              case 1: {
+                const f3 = p3.store.feeds[0]
+                t.equal(feed.key.toString('hex'), f3.key.toString('hex'), 'should see m3\'s writer')
+                t.equals(data.toString(), 'three', 'm3\'s writer should have been forwarded via m2')
+                p1.stack.close()
+                p2.stack.close()
+                p3.stack.close()
+                break
+              }
+              default:
+                t.ok(false, 'Only expected to see 2 feed events, got: ' + feedsReplicated)
+            }
+          })
         })
+        let pending = 3
+
+        const finishUp = err => {
+          t.error(err, `Stack gracefully closed #${pending}`)
+          if (--pending) return
+          t.pass('All 3 stacks closed')
+          t.end()
+        }
+
+        p1.stack.once('close', finishUp)
+        p2.stack.once('close', finishUp)
+        p3.stack.once('close', finishUp)
+        // stack1 and stack2 are now live connected.
+        p1.stack.handleConnection(true, p2.stack.replicate(false))
+
+        // When m3 is attached to m2, m2 should forward m3's writer to m1.
+        p3.stack.handleConnection(false, p2.stack.replicate(true))
       })
-      stack1.handleConnection(true, stack2.replicate(false))
     })
   })
+
+  function setup (msg, cb) {
+    const encryptionKey = Buffer.alloc(32)
+    encryptionKey.write('forwarding is good')
+    const stack = decentstack(encryptionKey, { live: true })
+    stack.once('error', t.error)
+    const store = new ArrayStore(ram, hypercore, 1)
+    stack.use(store, 'ArrayStore')
+    const feed = store.feeds[0]
+    const ret = { stack, store, feed }
+    feed.ready(() => {
+      feed.append(msg, err => {
+        t.error(err)
+        cb(ret)
+      })
+    })
+    return ret
+  }
 })
 
-test.skip('Corestore wrapper', t => {
+// TODO: No point testing this. corestore wrapper should be tested
+// via same type of unit-tests as demonstrated in ./test/middleware.js
+// this full-replication test is an unecessary repetition of the basic
+// replication test.
+test.skip('Corestore wrapper', async t => {
   t.plan(13)
   const encryptionKey = Buffer.alloc(32)
   encryptionKey.write('foo bars')
@@ -128,15 +155,18 @@ test.skip('Corestore wrapper', t => {
   stack1.once('error', t.error)
 
   // init second core store and register with the first replication manager
-  const store1 = corestore(ram)
-  stack1.use(store1)
+  const store1 = new Corestore(ram)
+  stack1.use(wrapCorestore(store1))
 
   const stack2 = decentstack(encryptionKey)
   stack2.once('error', t.error)
 
   // init second core store and register with the second replication manager
-  const store2 = corestore(ram)
-  stack2.use(store2)
+  const store2 = new Corestore(ram)
+  stack2.use(wrapCorestore(store2))
+
+  await defer(d => store1.ready(d)).catch(t.error)
+  await defer(d => store2.ready(d)).catch(t.error)
 
   const defCore = store1.default()
   const otherCore = store1.get()
@@ -238,72 +268,52 @@ test.skip('Core type decorator', t => {
   })
 })
 
-test('Live feed forwarding', t => {
-  t.plan(13)
-  setup('one', p1 => {
-    setup('two', p2 => {
-      setup('three', p3 => {
-        let feedsReplicated = 0
-        p1.store.on('feed', feed => {
-          feed.get(0, (err, data) => {
-            t.error(err)
-            switch (feedsReplicated++) {
-              case 0: {
-                const f2 = p2.store.feeds[0]
-                t.equal(feed.key.toString('hex'), f2.key.toString('hex'), 'should see m2\'s writer')
-                t.equals(data.toString(), 'two', 'm2\'s writer should have been replicated')
-                break
-              }
-              case 1: {
-                const f3 = p3.store.feeds[0]
-                t.equal(feed.key.toString('hex'), f3.key.toString('hex'), 'should see m3\'s writer')
-                t.equals(data.toString(), 'three', 'm3\'s writer should have been forwarded via m2')
-                p1.stack.close()
-                p2.stack.close()
-                p3.stack.close()
-                break
-              }
-              default:
-                t.ok(false, 'Only expected to see 2 feed events, got: ' + feedsReplicated)
-            }
-          })
-        })
-        let pending = 3
+// Hyperdrive V10 does not support proto:v7 yet
+test.skip('Composite-core replication', t => {
+  t.plan(12)
+  const encryptionKey = Buffer.alloc(32)
+  encryptionKey.write('foo bars')
 
-        const finishUp = err => {
-          t.error(err, `Stack gracefully closed #${pending}`)
-          if (--pending) return
-          t.pass('All 3 stacks closed')
-          t.end()
-        }
+  const stack1 = decentstack(encryptionKey)
+  stack1.once('error', t.error)
+  const store1 = new ArrayStore(ram, hyperdrive, 3)
+  stack1.use(store1)
 
-        p1.stack.once('close', finishUp)
-        p2.stack.once('close', finishUp)
-        p3.stack.once('close', finishUp)
-        // stack1 and stack2 are now live connected.
-        p1.stack.handleConnection(true, p2.stack.replicate(false))
+  const stack2 = decentstack(encryptionKey)
+  stack2.once('error', t.error)
+  const store2 = new ArrayStore(ram, hyperdrive, 1)
+  stack2.use(store2)
 
-        // When m3 is attached to m2, m2 should forward m3's writer to m1.
-        p3.stack.handleConnection(false, p2.stack.replicate(true))
+  store1.readyFeeds(snapshot => {
+    const [ drive ] = snapshot
+    const message = Buffer.from('Cats are everywhere')
+    t.equal(drive.version, 1, 'Version 1')
+    drive.writeFile('README.md', message, err => {
+      t.error(err)
+      t.equal(drive.version, 2, 'Version 2')
+      // console.log('Drive metadata:', drive.metadata.discoveryKey.hexSlice(0, 6))
+      // console.log('Drive content:', drive.content.discoveryKey.hexSlice(0, 6))
+      stack2.once('disconnect', (err, conn) => {
+        t.error(err)
+        t.ok(conn)
+        t.error(conn.lastError)
       })
+      stack1.once('disconnect', (err, conn) => {
+        t.error(err)
+        t.error(conn.lastError)
+        const replDrive = store2.feeds.find(f => f.key.equals(drive.key))
+        t.ok(replDrive, 'drive should have been replicated')
+        t.ok(replDrive.content, 'content should have been replicated')
+
+        t.equal(replDrive.version, 1, 'should also be on version 1')
+        replDrive.readFile('README.md', (err, res) => {
+          t.error(err)
+          // message
+          t.end()
+        })
+      })
+      stack1.handleConnection(true, stack2.replicate(false))
     })
   })
-
-  function setup (msg, cb) {
-    const encryptionKey = Buffer.alloc(32)
-    encryptionKey.write('forwarding is good')
-    const stack = decentstack(encryptionKey, { live: true })
-    stack.once('error', t.error)
-    const store = new ArrayStore(ram, hypercore, 1)
-    stack.use(store, 'ArrayStore')
-    const feed = store.feeds[0]
-    const ret = { stack, store, feed }
-    feed.ready(() => {
-      feed.append(msg, err => {
-        t.error(err)
-        cb(ret)
-      })
-    })
-    return ret
-  }
 })
+

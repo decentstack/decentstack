@@ -3,13 +3,15 @@
 decentstack
 =================
 
-Welcome!
+**Welcome!**
 
 Decentstack is a framework for building decentralized
-applications (primarily those that utilize [kappa-architecture](https://github.com/kappa-db/) )
+applications
 
-Check the announcement to see where this project is headed:
-https://github.com/decentstack/decentstack/issues/2
+(primarily those that utilize [kappa-architecture](https://github.com/kappa-db/) )
+
+> Check the announcement to see where this project is headed:
+> https://github.com/decentstack/decentstack/issues/2
 
 If you're brave enough you there are some pre-release docs available:
 
@@ -22,7 +24,7 @@ start with the excellent [kappa-workshop](https://noffle.github.io/kappa-arch-wo
 ### Updates
 - 2019-10-27 Still being written, thanks for checking in
 - 2019-10-28 Tests pass, docs still being written..
-- 2019-10-29 docs preview published. chunks of public-API docs still missing
+- 2019-10-29 docs preview [published](https://decentstack.org). chunks of public-API docs still missing
 
 
 ## Usage
@@ -36,7 +38,10 @@ const { Decentstack } = require('decentstack')
 class MyApplication {
   mounted (stack) {
     this.storage = multifeed(RAM, stack.key)
+
+    // TODO: get rid of this workaround
     this.kappa = kappa(null, { multifeed: this.multi })
+
     stack.use(this.storage)
   }
 

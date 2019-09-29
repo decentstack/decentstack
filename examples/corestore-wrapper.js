@@ -1,39 +1,40 @@
-/* corestore-replic8.js
- *
- * Creates corestore instances that
- * implements the middleware interface
- *
- * Usage:
- * // Initialize corestore through wrapper
- * const corestore = require('corestore-replic8')
- *
- * const store = corestore(randomAccess)
- * // Register it with the manager
- * mgr.use(store)
- *
- * // operate as usual
- * const core1 = store.default()
- * const core2 = store.get()
- *
- * // but replicate through manager instead of store.
- * const stream = mgr.replicate()
- */
+module.exports = (store, opts = {}) => {
+  if (!store) throw new Error('First argument must be a valid corestore')
+  const originHeader = opts.originHeader || 'corestore'
 
-const corestore = require('corestore')
-module.exports = (...args) => {
-  const store = corestore(...args)
+  return {
+    share (next) {
+      if (!store.isDefaultSet()) return next()
+      const info = store.getInfo()
+      const shared = [info.defaultKey]
+      for (const core of info.cores.values()) {
+        if (shared.indexOf(core.key) === -1) shared.push(core.key)
+      }
+      next(null, shared)
+    },
+
+    describe ({ key }, next) {
+      if (!store.isDefaultSet()) return next()
+      // Attach our origin header if core belongs to this store.
+      this.resolve(key, (err, core) => {
+        
+        debugger
+      })
+    },
+
+    resolve (key, next) {
+      const list = store.list()
+      if (!list.has(key)) return next() // We don't recognize this core.
+      // Fetch the core and resolve when ready.
+      const core = store.get({ key })
+      core.ready(() => next(null, core))
+    }
+  }
 
   // Share all available cores
   // Rely on other middleware down the line to 'unshare'
   // using application logic.
   store.share = function (next) {
-    if (!this.isDefaultSet()) return next()
-    const info = this.getInfo()
-    const shared = [info.defaultKey]
-    for (const core of info.cores.values()) {
-      if (shared.indexOf(core.key) === -1) shared.push(core.key)
-    }
-    next(null, shared)
   }.bind(store)
 
   // Tag each core with this specific corestore's default key

@@ -422,7 +422,7 @@ stack.use(store2)
 stack.use(store3)
 ```
 
-should assembled as the following linear aray:
+should be result in following linear aray:
 
 ```js
 [
