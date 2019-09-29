@@ -1,25 +1,24 @@
 [![Build Status](https://travis-ci.org/decentstack/decentstack.svg?branch=master)](https://travis-ci.org/decentstack/decentstack)
+[1.0 Announcement](https://github.com/decentstack/decentstack/issues/2)
 
 decentstack
 =================
 
-**Welcome!**
+### Welcome!
 
 Decentstack is a framework for building decentralized
 applications
 
 (primarily those that utilize [kappa-architecture](https://github.com/kappa-db/) )
 
-> Check the announcement to see where this project is headed:
-> https://github.com/decentstack/decentstack/issues/2
-
 If you're brave enough you there are some pre-release docs available:
 
 [Documentation](https://decentstack.org) (Still being written & revised)
 
 The quickstart instructions are not available yet, but I would recommend you to
-start with the excellent [kappa-workshop](https://noffle.github.io/kappa-arch-workshop/build/01.html).
-
+start with the excellent [kappa-workshop](https://noffle.github.io/kappa-arch-workshop/build/01.html). It's a great introduction to building decentralized applications that
+naievly exchange trust and a "must have" prequel to the issues which Decentstack attempts
+to address.
 
 ### Updates
 - 2019-10-27 Still being written, thanks for checking in
@@ -27,7 +26,7 @@ start with the excellent [kappa-workshop](https://noffle.github.io/kappa-arch-wo
 - 2019-10-29 docs preview [published](https://decentstack.org). chunks of public-API docs still missing
 
 
-## Usage
+### Usage
 
 ```js
 const RAM = require('random-access-memory')
