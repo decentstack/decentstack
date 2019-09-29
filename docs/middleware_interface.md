@@ -1,7 +1,7 @@
 Middleware Interface
 ========================
 
-!> This document is an early draft, and might contain inaccuracies or irellevant
+!> This document is an early draft, and might contain inaccuracies and/or irellevant
 information.<br/>
 __You've been warned :)__
 
@@ -69,7 +69,8 @@ class NOOPApp {
   }
 
   describe ({ key, meta, resolve }, next) {
-    next(null, {}) }
+    next(null, {})
+  }
 
   hold ({ key, meta }, next) {
     next(null, false)
@@ -385,17 +386,28 @@ replication session was initiated with option `live` set to `true`.
 lifecycle by other middleware, but the middleware-host will only invoke the
 callback when it needs resolve a core in order to `.replicate()`
 
-## Stack iteration order
+## Priority
 
+!> Priority between applications implementing the same callbacks
+has been **reversed** during the share process.
 
 ![Stack iteration order diagram](./stack_iteration_order.svg)
 
-!>In order to make it eaiser to write useful selfcontained middleware,
-the stack iteration order has been **reversed** during the share process.
+This can be thought of as stack consisting of a glass-jar at the bottom, and then
+a couple of mesh-filters resting top of the jar opening.
 
-### A theoretical example
+If you were to attempt to pour grains into the jar, then the grains would first
+have to pass through the top-most filter and lastly end up inside the jar.
 
-Consider the following stack configuration:
+And if you then want to get the grains out, you'd have to take the entire stack
+and turn it upside down letting them first exit the jar and then hit the _bottom_
+filter before the top-filter.
+
+
+### Nested middleware
+
+The following stack configuration:
+
 ```js
 stack.use(filterA)
 stack.use(filterB)
@@ -410,7 +422,7 @@ stack.use(store2)
 stack.use(store3)
 ```
 
-which should result in the following linear array:
+should assembled as the following linear aray:
 
 ```js
 [
@@ -425,8 +437,8 @@ which should result in the following linear array:
 ]
 ```
 
-`reject()` and `store()` callbacks on middleware will logically be invoked in
-the same order that they were registered
+`reject()` and `store()` callbacks on middleware will be invoked in
+the same order that they were registered:
 
 ```js
 [filterA, filterB, FilterC].forEach(w => w.reject(listOfCores))
@@ -439,61 +451,5 @@ But `share`, `describe`, `hold` and `resolve` callbacks will be invoked in
 ```js
 [store3, store2, store1].forEach(w => w.share())
 [filterC, filterB, filterA].forEach(w => w.hold())
-```
-
-### A practical experiment
-
-1. Place two glass jars side by side,
-2. Drop some grains into the jar _A_.
-3. Put a mesh-filter with big holes ontop of each jar
-4. Put a mesh-filter with small holes mesh ontop of each jar
-5. Hold jar _A_ **upside down** over jar _B_
-6. Observe the order that the grains pass through the filters.
-7. Reverse positions of _A_ and _B_ and observe grains travel into the reverse
-   direction
-8. repeat step 7
-
-
-### Conclusion
-
-!> Middleware behave in `Mirrored priority`
-
-"Why does that matter?" - you may ask.
-
-As a middleware developer, if you know that some middleware will always be
-invoked *after* or always *before* your middleware, then you can exploit this
-piece of information and depend on it.
-
-If we treat the stack as a directional message bus,
-then we can send messages downwards through the stack toward the storage when we receive data,
-and send messages upwards through the stack toward the peer when we transmit data.
-Which enables middleware to be designed to loosely communicate with eachother.
-
-##### `TODO: illustrate the pattern with a good example`
-
-!> Rant Warning
-
-Potential usecases:
-* two stores with conditionally overlapping `share` & `store` callbacks
-  _(symmetry required)_ (who should get first take on adopting a new core?)
-* two loosely coupled decorators, one adds information while the other
-  conditionally overwrites it. _(symmetry NOT required)_
-* two data-specific guards both implementing `filter` and `hold` _(symmetry maybe required)_
-* Anything that exhibits conditional invertion or negation of multiple rules.
-  Don't really know how to document this in human language..
-
-```js
-/*
- * If you're reading this, I have to apologize, this section is a work in progress.
- * If you want to help solve this puzzle, then please open an
- * issue or send a pull-request.)
- *
- * The theory is that the more callbacks your middleware implements, the more
- * sensitive it becomes to invocation order. I had a scenario in the past
- * (which I seem to have misplaced now) that stressed the need for a reversal
- * of priority depending on direction of data flow.
- *
- * Is this a design flaw or a feature?
- */
 ```
 
