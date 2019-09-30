@@ -1,7 +1,7 @@
 # API
 
 !> All public methods that involve an asynchroneous operation
-support both callback and promise invocation through [deferinfer]()
+support both callback and promise invocation through [deferinfer](https://github.com/telamon/deferinfer)
 Having said that, try to avoid using both promises and the callbacks at the
 same time.
 
@@ -37,6 +37,12 @@ const stack = decentstack(key, opts)
 const { Decentstack } = require('decentstack')
 const stack = new Decentstack(key, opts)
 ```
+
+### Properties
+
+- _ro_ **key** `{Buffer}` The key used by the exchange channel
+- _ro_ **closed** `{boolean}` Flag indicating if the stack is closed, a closed stack should not be reused.
+
 ### Function: use
 `use (namespace = 'default', app)`
 
@@ -171,68 +177,122 @@ _Accept_ process
 Runs the snapshot through all middleware implementing the `store` method.
 Useful to for unit-testing middleware, usually used internally during `Accept` phase
 
+### Function: replicate
+`replicate (initiator, [opts])`
 
-# old docs
+**Arguments**
 
-#### `const stack = decentstack(encryptionKey, opts)`
+- `{boolean} initiator` indicates which end should initiate the Noise handshake
+  (set to false if connection was initated remotely, or true if initiated
+  locally)
+- _optional_ `{Object} opts` hypercore-protocol options
 
-`encryptionKey` pre-shared-key Buffer(32), used for exchange & meta message encryption
-`opts` hypercore-protocol opts
+**Returns**
 
-`opts.noforward` the manager keeps track of which
-keys have been exchanged to which peers, if a new key is
-encountered then by default the manager initiates a new announce
-exchange with all active peers that have not been offered that
-key yet. This flags turns off that behaviour.
+- `{Object} stream` An instance of hypercore-protocol's class `Protocol`
 
-#### `stack.use(namespace, middleware)`
+**Description**
 
-Assembles an application stack where each middleware will be invoked in order of
-registration.
+Compatibility function, same as `handleConnection` but returns only the stream
+from the `PeerConnection` instance.
 
-`namespace` (optional) creates a virtual sub-exchange channel that helps
-prevent a core ending up in the wrong store or being instantiated with wrong
-class.
+```js
+const stream = stack.handleConnection(true).stream
+```
 
-`middleware` should be an object that optionally implements at least one of the
-methods defined in [middleware interface](./middleware_interface.md)
+### Function: handleConnection
 
-#### `stack.key`
+`stack.handleConnection(initiator, [remoteStream], [opts])`
 
-Exchange channel encryption key
+**Arguments**
 
-#### `stack.replicate(initiator, opts)`
-Creates a PeerConnection returns it's stream
-(compatibility)
+- `{boolean} initiator` indicates which end should initiate the Noise handshake
+  (set to false if connection was initated remotely, or true if initiated
+  locally)
+- _optional_ `{Object} remoteStream` Nodejs#Stream compatible instance that will be
+  automatically piped into the local connection stream if provided
+- _optional_ `{Object} opts` hypercore-protocol options
 
-returns `stream`
+**Returns**
 
-#### `stack.handleConnection(initiator, stream, opts)`
-The preffered way to add peer-connections to the manager
-as opposite to `stack.replicate()`.
+- `{Object} connection` An instance of class `PeerConnection`
 
-returns `PeerConnection`
+**Description**
 
-#### `stack.close([err,] cb)`
+Instantiates a new instance of `PeerConnection` and registers it with the
+replication manager.
 
-Closes all active connections and invokes `close`
-on all middleware.
+### Function: close
 
-#### event `'connected', PeerConnection`
+`close ([error], [callback])`
 
-Emitted when a new peer connection is added to manager
+**Arguments**
 
-#### event `'disconnect', err, PeerConnection`
+- _optional_ `{Object} error` Shut down the stack with an error.
+- optional `{Function} callback` invoked when stack is closed.
 
-Emitted whenever a peer connection is dropped
+**Description**
 
-#### event `'error'`
+Tells the manager to close all peer connections and
+notifies all middleware that the stack is destined for the garbage collector.
+
+### Event: connect
+
+Name: `"connect"`
+
+**Emits**
+
+- `{Object} connection` Instance of PeerConnection
+
+**Description**
+
+Emitted when a registered `PeerConnection` becomes `active`.
+
+(The peer has finished the protocol-handshake and is about start the
+feed exchange unless `noTalk` option was set.)
+
+### Event: disconnect
+
+Name: `"disconnect"`
+
+**Emits**
+
+- `{Object} error` presence indicates that connection was dropped due to exception.
+- `{Object} connection` Instance of PeerConnection
+
+**Description**
+
+Emitted when a registered `PeerConnection` becomes `dead` and is about to be
+unregistered from the manager. (References to the PeerConnection are thrown away
+after this point)
+
+`conn.lastError` holds a copy of `error` for future lookups.
 
 ## class `PeerConnection`
 
-#### getter `conn.state`
+A peer connection holds the state of a connected peer, keeping track of
+what the peer has offered and requested.
 
-returns current connection state: `init|active|dead`
+Can be thought of as a highlevel wrapper around
+the hypercore-protocol `Protocol` class.
 
-> There's alot missing from this section, please see
-> [source](./lib/peer-connection.js)
+### Properties
+
+- _ro_ **initiator** `{boolean}` copy of `initiator` flag during instantiation.
+- _ro_ **state** `{string}` current connection state: `init|active|dead`
+- _ro_ **activeChannels** `{Array<Channel|Substream>}` list of currently active replication streams via hypercore-protocol Channel or virtual substreams.
+- _ro_ **activeKeys** `{Array<string>}` list of actively replicating core keys
+- _ro_ **offeredKeys** `{Object<NS:Array<String>>}` list of core keys that have been
+  offered on this connection
+- _ro_ **requestedKeys** `{Object<NS:Array<String>>}` list of core keys that were requested
+  by us.
+- _ro_ **remoteOfferedKeys** `{Object<NS:Array<String>>}` list of core keys that remote at some point offered to us.
+- _ro_ **stats** `{Object}` an object containing exchange-stats:
+ - ```{ snapshotsSent: 0,
+      snapshotsRecv: 0,
+      requestsSent: 0,
+      requestsRecv: 0,
+      channelesOpened: 0,
+      channelesClosed: 0
+    }```
+

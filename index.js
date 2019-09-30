@@ -482,7 +482,6 @@ class Decentstack extends EventEmitter {
         infer(p, next)
       })
     }, err => {
-
       debug('middleware#share() complete')
       if (err) cb(err)
       else cb(null, result)

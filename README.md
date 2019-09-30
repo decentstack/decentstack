@@ -1,11 +1,11 @@
 [![Build Status](https://travis-ci.org/decentstack/decentstack.svg?branch=master)](https://travis-ci.org/decentstack/decentstack)
 
-decentstack
+Decentstack
 =================
 
 [1.0 Announcement](https://github.com/decentstack/decentstack/issues/2)
 
-### Welcome!
+## Welcome!
 
 Decentstack is a framework for building decentralized
 applications
@@ -17,17 +17,17 @@ If you're brave enough you there are some pre-release docs available:
 [Documentation](https://decentstack.org) (Still being written & revised)
 
 The quickstart instructions are not available yet, but I would recommend you to
-start with the excellent [kappa-workshop](https://noffle.github.io/kappa-arch-workshop/build/01.html). It's a great introduction to building decentralized applications that
-naievly exchange trust and a "must see" prequel to the issues which Decentstack attempts
+start with the excellent [kappa-workshop](https://noffle.github.io/kappa-arch-workshop/build/01.html). It's a great introduction to building decentralized applications and a "must read" prequel to the issues which Decentstack attempts
 to address.
 
-### Updates
-- 2019-10-27 Still being written, thanks for checking in
-- 2019-10-28 Tests pass, docs still being written..
+## Updates
+
 - 2019-10-29 docs preview [published](https://decentstack.org). chunks of public-API docs still missing
+- 2019-10-28 Tests pass, docs still being written..
+- 2019-10-27 Still being written, thanks for checking in
 
 
-### Usage
+## Usage
 
 ```js
 const RAM = require('random-access-memory')
@@ -84,5 +84,5 @@ stream.pipe(remoteStream).pipe(stream)
 
 This project is licensed under GNU AGPLv3
 
-<sup>If you have any concerns or conflicts with this license please open an issue and
+<sup>If you have any concerns or conflicts with this license, then please open an issue and
 state your case.</sup>
