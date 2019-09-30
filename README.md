@@ -40,7 +40,7 @@ class MyApplication {
     this.storage = multifeed(RAM, stack.key)
 
     // TODO: get rid of this workaround
-    this.kappa = kappa(null, { multifeed: this.multi })
+    this.kappa = kappa(null, { multifeed: this.storage })
 
     stack.use(this.storage)
   }
