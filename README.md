@@ -12,7 +12,7 @@ applications
 
 (primarily those that utilize [kappa-architecture](https://github.com/kappa-db/) )
 
-If you're brave enough you there are some pre-release docs available:
+If you're brave enough, there are some pre-release docs available:
 
 [Documentation](https://decentstack.org) (Still being written & revised)
 
