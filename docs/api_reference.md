@@ -7,6 +7,12 @@ same time.
 
 
 ## class `Decentstack`
+extends `EventEmitter`
+
+### Properties
+
+- _ro_ **key** `{Buffer}` The key used by the exchange channel
+- _ro_ **closed** `{boolean}` Flag indicating if the stack is closed, a closed stack should not be reused.
 
 ### Constructor
 `new Decentstack (exchangeKey, options = {})`
@@ -38,10 +44,6 @@ const { Decentstack } = require('decentstack')
 const stack = new Decentstack(key, opts)
 ```
 
-### Properties
-
-- _ro_ **key** `{Buffer}` The key used by the exchange channel
-- _ro_ **closed** `{boolean}` Flag indicating if the stack is closed, a closed stack should not be reused.
 
 ### Function: use
 `use (namespace = 'default', app)`
@@ -269,6 +271,7 @@ after this point)
 `conn.lastError` holds a copy of `error` for future lookups.
 
 ## class `PeerConnection`
+extends `EventEmitter`
 
 A peer connection holds the state of a connected peer, keeping track of
 what the peer has offered and requested.
@@ -280,6 +283,7 @@ the hypercore-protocol `Protocol` class.
 
 - _ro_ **initiator** `{boolean}` copy of `initiator` flag during instantiation.
 - _ro_ **state** `{string}` current connection state: `init|active|dead`
+- _ro_ **stream** `{Object}` hypercore-protocol instance
 - _ro_ **activeChannels** `{Array<Channel|Substream>}` list of currently active replication streams via hypercore-protocol Channel or virtual substreams.
 - _ro_ **activeKeys** `{Array<string>}` list of actively replicating core keys
 - _ro_ **offeredKeys** `{Object<NS:Array<String>>}` list of core keys that have been
@@ -296,3 +300,75 @@ the hypercore-protocol `Protocol` class.
       channelesClosed: 0
     }```
 
+### Constructor
+`new PeerConnection (initiator, exchangeKey, opts = {})`
+
+**Arguments**
+
+- `{boolean} initiator` indicates which end should initiate the Noise handshake
+  (set to false if connection was initated remotely, or true if initiated
+  locally)
+- `{Buffer|string} exchangeKey` The key that should be used when opening the exchange channel
+- `{Object} opts` Same options as hypercore-protocol plus the following extra:
+  - ~~`{boolean} useVirtual` use substreams instead of hypercore protocol channels~~ redesign in progress
+
+**Description**
+
+Initializes a new `PeerConnection` instance, can be used stand-alone without the
+replication manager for unit-tests or a single-connection IPC client.
+
+```js
+const key = Buffer.alloc(32)
+key.write('hack the planet')
+
+const c1 = new PeerConnection(true, key)
+const c2 = new PeerConnection(false, key)
+
+// don't forget to remove attached listeners
+c1.on('state-change', console.log.bind(null, 'Conn1 changed state:'))
+c2.on('state-change', console.log.bind(null, 'Conn2 changed state:'))
+
+c1.stream.pipe(c2.stream).pipe(c1.stream)
+```
+
+### Function: joinFeed
+`TODO: document once api stabilized`
+
+### Function: sendManifest
+`TODO: document once api stabilized`
+
+### Function: sendRequest
+`TODO: document once api stabilized`
+
+### Function: isActive
+`TODO: document once api stabilized`
+
+### Function: kill
+`kill ([error])
+
+**Arguments**
+
+- _optional_ `{Object} error` cause of death
+
+**Description**
+
+Drops the peer gracefully when invoked **without** the `error`.
+If `error` was passed, then the connection will be destroyed and an `"error"`
+ event will be emitted.
+
+Regardless of error, a `"state-change"` event will be emitted on the
+`PeerConnection` instance as this is the function that causes the
+state to transition from `init|active` to `dead`.
+
+### Event: state-change
+`TODO: document once api stabilized`
+### Event: connected
+`TODO: document once api stabilized`
+### Event: end
+`TODO: document once api stabilized`
+### Event: feed
+`TODO: document once api stabilized`
+### Event: manifest
+`TODO: document once api stabilized`
+### Event: replicate
+`TODO: document once api stabilized`
