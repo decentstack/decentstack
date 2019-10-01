@@ -5,12 +5,7 @@ const ram = require('random-access-memory')
 const { defer } = require('deferinfer')
 const decentstack = require('..')
 
-// examples
 const ArrayStore = require('../examples/array-store')
-const Corestore = require('corestore')
-const wrapCorestore = require('../examples/corestore-wrapper')
-const typedecorator = require('../examples/type-decorator')
-const { encodeHeader } = typedecorator
 
 test('basic replication', async t => {
   t.plan(11)
@@ -140,132 +135,6 @@ test('Basic: Live feed forwarding', t => {
     })
     return ret
   }
-})
-
-// TODO: No point testing this. corestore wrapper should be tested
-// via same type of unit-tests as demonstrated in ./test/middleware.js
-// this full-replication test is an unecessary repetition of the basic
-// replication test.
-test.skip('Corestore wrapper', async t => {
-  t.plan(13)
-  const encryptionKey = Buffer.alloc(32)
-  encryptionKey.write('foo bars')
-
-  const stack1 = decentstack(encryptionKey)
-  stack1.once('error', t.error)
-
-  // init second core store and register with the first replication manager
-  const store1 = new Corestore(ram)
-  stack1.use(wrapCorestore(store1))
-
-  const stack2 = decentstack(encryptionKey)
-  stack2.once('error', t.error)
-
-  // init second core store and register with the second replication manager
-  const store2 = new Corestore(ram)
-  stack2.use(wrapCorestore(store2))
-
-  await defer(d => store1.ready(d)).catch(t.error)
-  await defer(d => store2.ready(d)).catch(t.error)
-
-  const defCore = store1.default()
-  const otherCore = store1.get()
-
-  const msg1 = Buffer.from('This is the default core')
-  const msg2 = Buffer.from('This is another core')
-
-  stack2.once('disconnect', (err, conn) => {
-    t.error(err)
-    t.ok(conn, 'stack2 disconnected')
-    t.error(conn.lastError)
-
-    const replicatedDefCore = store2.get({ key: defCore.key })
-    t.ok(replicatedDefCore)
-    replicatedDefCore.get(0, (err, data) => {
-      t.error(err)
-      t.equals(msg1.toString(), data.toString(), 'Core1 and msg1 was replicated')
-
-      const replicatedOther = store2.get({ key: otherCore.key })
-      t.ok(replicatedOther)
-      replicatedOther.get(0, (err, data) => {
-        t.error(err)
-        t.equals(msg2.toString(), data.toString(), 'Core2 and msg2 was replicated')
-
-        stack2.resolveFeed(otherCore.key, (err, alternativeCore) => {
-          t.error(err)
-          t.same(replicatedOther, alternativeCore)
-          t.end()
-        })
-      })
-    })
-  })
-
-  defCore.ready(() => {
-    defCore.append(msg1, err => {
-      t.error(err)
-      otherCore.ready(() => {
-        store1.get(otherCore.key)
-        otherCore.append(msg2, err => {
-          t.error(err)
-          stack1.handleConnection(true, stack2.replicate(false))
-        })
-      })
-    })
-  })
-})
-
-test.skip('Core type decorator', t => {
-  t.plan(3)
-  const composite = corestore(ram)
-  const core = hypercore(ram)
-  const store1 = new ArrayStore(ram, hypercore, [
-    core,
-    hyperdrive(ram),
-    composite
-    // hypertrie(ram)
-  ])
-  const expectedTypes = [
-    'hypertrie',
-    'CabalFeed:7.0.0',
-    undefined
-  ]
-
-  const encryptionKey = Buffer.alloc(32)
-  encryptionKey.write('types are useful')
-
-  const stack1 = decentstack(encryptionKey)
-  stack1.once('error', t.error)
-
-  const stack2 = decentstack(encryptionKey)
-  stack2.once('error', t.error)
-
-  stack1.use(typedecorator)
-  stack1.use(store1)
-
-  let tn = 0
-  stack2.use({
-    accept ({ key, meta, resolve }, next) {
-      t.equal(meta.headerType, expectedTypes[tn++])
-      next()
-    }
-  })
-
-  core.ready(() => {
-    const coreMeta = Buffer.from(JSON.stringify({
-      passportId: '045B4203EDF92',
-      signature: '92FDe3024B540'
-    }))
-    const binhdr = encodeHeader('CabalFeed:7.0.0', coreMeta)
-
-    core.append(binhdr, err => {
-      t.error(err)
-      const conn = stack1.handleConnection(false, stack2.replicate(true))
-      conn.once('end', err => {
-        t.error(err)
-        t.end()
-      })
-    })
-  })
 })
 
 // Hyperdrive V10 does not support proto:v7 yet

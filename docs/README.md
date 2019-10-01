@@ -14,7 +14,7 @@ but rather with an attempt to find the common denominator between the
 two patterns and make a logical clean cut between infrastructure and
 application.
 
-So if you're already familiar the technology
+If you're already familiar [kappa-architecture](https://github.com/kappa-db/)
 then please take a look at [the middleware
 interface](/middleware_interface.md)
 and [let us hear your thoughts!](https://github.com/decentpass/decentpass/issues/middleware_interface_design)

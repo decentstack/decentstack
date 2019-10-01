@@ -4,6 +4,7 @@ module.exports = (store, opts = {}) => {
 
   return {
     share (next) {
+      debugger
       if (!store.isDefaultSet()) return next()
       const info = store.getInfo()
       const shared = [info.defaultKey]
