@@ -6,8 +6,6 @@ Decentstack
 
 [1.0 Announcement](https://github.com/decentstack/decentstack/issues/2)
 
-![Overview Image](./docs/decentstack-overview.svg)
-
 ## Welcome!
 
 Decentstack is a framework for building decentralized
@@ -28,6 +26,10 @@ to address.
 - 2019-10-29 docs preview [published](https://decentstack.org). chunks of public-API docs still missing
 - 2019-10-28 Tests pass, docs still being written..
 - 2019-10-27 Still being written, thanks for checking in
+
+## Overview
+
+![Overview Image](./docs/decentstack-overview.svg)
 
 
 ## Usage
