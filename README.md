@@ -6,9 +6,7 @@ Decentstack
 
 [1.0 Announcement](https://github.com/decentstack/decentstack/issues/2)
 
-![Overview Image](./docs/decentstack-overview.svg)
-
-## Welcome!
+### Welcome!
 
 Decentstack is a framework for building decentralized
 applications
@@ -23,14 +21,12 @@ The quickstart instructions are not available yet, but I would recommend you to
 start with the excellent [kappa-workshop](https://noffle.github.io/kappa-arch-workshop/build/01.html). It's a great introduction to building decentralized applications and a "must read" prequel to the issues which Decentstack attempts
 to address.
 
-## Updates
+### Overview
 
-- 2019-10-29 docs preview [published](https://decentstack.org). chunks of public-API docs still missing
-- 2019-10-28 Tests pass, docs still being written..
-- 2019-10-27 Still being written, thanks for checking in
+![Overview Image](./docs/decentstack-overview.svg)
 
 
-## Usage
+### Usage
 
 ```js
 const RAM = require('random-access-memory')
@@ -83,7 +79,7 @@ stream.pipe(remoteStream).pipe(stream)
 
 ```
 
-## License
+### License
 
 This project is licensed under GNU AGPLv3
 
