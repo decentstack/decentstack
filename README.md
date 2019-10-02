@@ -6,6 +6,8 @@ Decentstack
 
 [1.0 Announcement](https://github.com/decentstack/decentstack/issues/2)
 
+![Overview Image](./docs/decentstack-overview.svg)
+
 ## Welcome!
 
 Decentstack is a framework for building decentralized
