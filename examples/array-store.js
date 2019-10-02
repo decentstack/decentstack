@@ -17,7 +17,7 @@ class ArrayStore extends EventEmitter {
 
     // Generate some test-feeds
     if (Array.isArray(feeds)) {
-      for (let feed of feeds) {
+      for (const feed of feeds) {
         this.feeds.push(feed)
         this.emit('feed', feed)
       }

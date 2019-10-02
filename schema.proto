@@ -3,8 +3,6 @@ message Exchange {
   oneof msg {
     Manifest manifest = 1;
     RequestReplicate req = 2;
-    // Allow using repl8 extension to send diverse messages?
-    // ApplicationDefined ad = 3;
   }
 }
 

@@ -2,7 +2,7 @@ const test = require('tape')
 const hypercore = require('hypercore')
 const hyperdrive = require('hyperdrive')
 const ram = require('random-access-memory')
-const { defer } = require('deferinfer')
+// const { defer } = require('deferinfer')
 const decentstack = require('..')
 
 const ArrayStore = require('../examples/array-store')
@@ -154,7 +154,7 @@ test.skip('Composite-core replication', t => {
   stack2.use(store2)
 
   store1.readyFeeds(snapshot => {
-    const [ drive ] = snapshot
+    const [drive] = snapshot
     const message = Buffer.from('Cats are everywhere')
     t.equal(drive.version, 1, 'Version 1')
     drive.writeFile('README.md', message, err => {
@@ -185,4 +185,3 @@ test.skip('Composite-core replication', t => {
     })
   })
 })
-

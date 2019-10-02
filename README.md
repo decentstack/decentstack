@@ -1,5 +1,4 @@
 [![Build Status](https://travis-ci.org/decentstack/decentstack.svg?branch=master)](https://travis-ci.org/decentstack/decentstack)
-![npm](https://img.shields.io/npm/dm/decentstack)
 
 Decentstack
 =================
