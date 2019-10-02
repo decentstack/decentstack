@@ -344,7 +344,7 @@ c1.stream.pipe(c2.stream).pipe(c1.stream)
 `TODO: document once api stabilized`
 
 ### Function: kill
-`kill ([error])
+`kill ([error])`
 
 **Arguments**
 
