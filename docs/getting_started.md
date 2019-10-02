@@ -3,31 +3,73 @@
 A pre-release is now available on npm.
 
 ```sh
-npm i replic8
+npm i decentstack
+# --OR--
+yarn add decentstack
 ```
 
-## Usage
+## Quickstart
+!>This guide is work in progress, the example below works but is not
+very descriptive. apologies..
+
+Define your application in `app.js`
 ```js
-const middleware1 = require('...')
-const replic8 = require('replic8')
-const hyperswarm = require('hyperswarm')
+const RAM = require('random-access-memory')
+const multifeed = require('multifeed')
+const kappa = require('kappa-core')
 
-// Communication and exchange encryption
-const swarmKey = Buffer.alloc(32)
-swarmKey.write('passwords and secrets')
+class MyApp {
 
-// Initialize a new manger
-const mgr = replic8(swarmKey, { live: true })
+  mounted (stack) {
+    this.storage = multifeed(RAM, stack.key)
 
-mgr.on('error', console.error) // Subscribe to all errors
+    this.kappa = kappa(null, { multifeed: this.storage }) // this workaround will be fixed.
+    // register our storage
+    stack.use(this.storage)
+  }
 
-// register some filters or decorators
-mgr.use(middleware1)
+  // Expose feed lengths
+  async describe ({ resolve }, next) {
+    try {
+      const feed = await resolve()
+      next(null, { seq: feed.length }) // expose length as 'seq'
+    } catch(err) {
+      next(err)
+    }
+  }
 
-// lastly register your core storage
-mgr.use(aCoreStorage)
+  // prevent zero-length feeds from being shared
+  hold ({ meta }, next) {
+    next(null, !!meta.seq)
+  }
 
-const swarm = hyperswarm.join('hash the swarmkey')
-swarm.on('connection', mgr.handleConnection)
+  // prevent zero-length feeds from being accepted
+  reject ({ meta }, next) {
+    next(null, !!meta.seq)
+  }
+}
+
+module.exports = MyApp
+```
+
+In your entrypoint `index.js`, compose your stack
+
+```js
+const { Decentstack } = require('decentstack')
+
+// Setup an exchange-key.
+// This key will be used to securly detect
+// if a peer has access to your exchangeKey
+// and to safely encrypt your entire communication.
+const exchangeKey = Buffer.alloc(32)
+exchangeKey.write('communication-encryption-key')
+
+// Create stack and register our application
+const stack = new Decentstack(exchangeKey, { live: true })
+stack.use(new MyApplication())
+
+// Replicate as usual
+const stream = stack.replicate(true)
+stream.pipe(remoteStream).pipe(stream)
 ```
 
