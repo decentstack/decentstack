@@ -587,7 +587,6 @@ class Decentstack extends EventEmitter {
     // Forward feed to other active connections
     // that have not seen this feed yet.
     //
-    // TODO: here's a bit of a pickle.
     // We have two natural spots for doing this operation
     // 1. Whenever a middleware `accept()` return true.
     // Thats a potential new feed, and the original feed's
