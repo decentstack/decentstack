@@ -27,7 +27,7 @@
   "dependencies": {
     "deferinfer": "^1.0.1",
     "end-of-stream": "^1.4.3",
-    "hypercore-protocol": "mafintosh/hypercore-protocol#v7",
+    "hypercore-protocol": "^7.3.0",
     "hypercore-protocol-substream": "^2.0.7",
     "nanoguard": "^1.2.1",
     "pretty-hash": "^1.0.1",
