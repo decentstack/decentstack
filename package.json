@@ -25,6 +25,7 @@
     "url": "git+https://github.com/telamon/replic8.git"
   },
   "dependencies": {
+    "codecs": "^2.0.0",
     "deferinfer": "^1.0.1",
     "end-of-stream": "^1.4.3",
     "hypercore-protocol": "^7.3.0",

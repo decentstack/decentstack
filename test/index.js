@@ -3,7 +3,7 @@ const hypercore = require('hypercore')
 const hyperdrive = require('hyperdrive')
 const ram = require('random-access-memory')
 // const { defer } = require('deferinfer')
-const decentstack = require('..')
+const { Decentstack, PeerConnection } = require('..')
 
 const ArrayStore = require('../examples/array-store')
 
@@ -11,7 +11,7 @@ test('basic replication', async t => {
   t.plan(11)
   const encryptionKey = Buffer.alloc(32)
   encryptionKey.write('foo bars')
-  const stack = decentstack(encryptionKey)
+  const stack = new Decentstack(encryptionKey)
   stack.once('error', t.error)
 
   // Register corestore as middleware
@@ -19,7 +19,7 @@ test('basic replication', async t => {
   const localStore = new ArrayStore(ram, hypercore, 3)
   stack.use(localStore)
 
-  const remoteStack = decentstack(encryptionKey)
+  const remoteStack = new Decentstack(encryptionKey)
   remoteStack.once('error', t.error)
 
   // Remote has 1 feed
@@ -121,7 +121,7 @@ test('Basic: Live feed forwarding', t => {
   function setup (msg, cb) {
     const encryptionKey = Buffer.alloc(32)
     encryptionKey.write('forwarding is good')
-    const stack = decentstack(encryptionKey, { live: true })
+    const stack = new Decentstack(encryptionKey, { live: true })
     stack.once('error', t.error)
     const store = new ArrayStore(ram, hypercore, 1)
     stack.use(store, 'ArrayStore')
@@ -143,12 +143,12 @@ test.skip('Composite-core replication', t => {
   const encryptionKey = Buffer.alloc(32)
   encryptionKey.write('foo bars')
 
-  const stack1 = decentstack(encryptionKey)
+  const stack1 = new Decentstack(encryptionKey)
   stack1.once('error', t.error)
   const store1 = new ArrayStore(ram, hyperdrive, 3)
   stack1.use(store1)
 
-  const stack2 = decentstack(encryptionKey)
+  const stack2 = new Decentstack(encryptionKey)
   stack2.once('error', t.error)
   const store2 = new ArrayStore(ram, hyperdrive, 1)
   stack2.use(store2)
@@ -184,4 +184,37 @@ test.skip('Composite-core replication', t => {
       stack1.handleConnection(true, stack2.replicate(false))
     })
   })
+})
+
+test('Hypercore extensions', async t => {
+  const encryptionKey = Buffer.alloc(32)
+  encryptionKey.write('foo bars')
+
+  const stack = new Decentstack(encryptionKey)
+  stack.once('error', t.error)
+
+  const conn = new PeerConnection(true, encryptionKey, {
+    live: true
+  })
+  conn.once('error', t.error)
+
+  const ext2 = conn.registerExtension('hello', {
+    encoding: 'json',
+    onmessage (decodedMessage, peer) {
+      ext2.send({ dead: 'feed' }, peer)
+    }
+  })
+
+  const ext1 = conn.registerExtension('hello', {
+  })
+
+  t.equal(ext1.name, 'hello')
+  ext1.broadcast({ world: 'greetings!' })
+  ext1.send({ greetins: true }, conn)
+  ext1.destroy() // unregisters the extension
+  t.notOk(stack._extensions.hello)
+  t.equal(stack._extNames.indexOf('hello'), -1)
+
+  stack.handleConnection(conn.stream, { live: true })
+  conn.stream.once('end', t.end)
 })
