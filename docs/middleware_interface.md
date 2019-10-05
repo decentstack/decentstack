@@ -54,6 +54,19 @@ standards, if you for any reason don't want to
 use Decentstack as a middleware host, it should be an ~~easy task~~ chore to implement
 your own middleware host using the specification below.
 
+## Lifecycle
+
+The diagram below illustrates the typical flow of callback invocation
+
+![Middleware Lifecycle Diagram](./middleware_lifecycle.svg)
+
+!> share & accept processes might be repeated multiple times if the
+replication session was initiated with option `live` set to `true`.
+
+!> The `resolve` callback might be invoked multiple times throughout the
+lifecycle by other middleware, but the middleware-host will only invoke the
+callback when it needs resolve a core in order to `.replicate()`
+
 ## Complete Template
 
 ```js
@@ -372,19 +385,6 @@ It will first ask all middleware to close.
 
 !> As a rule of thumb, if you instantiate anything during `mounted` then
 implement the `close` function to deallocate instantiated resources.
-
-## Lifecycle
-
-The diagram below illustrates the typical flow of callback invocation
-
-![Middleware Lifecycle Diagram](./middleware_lifecycle.svg)
-
-!> share & accept processes might be repeated multiple times if the
-replication session was initiated with option `live` set to `true`.
-
-!> The `resolve` callback might be invoked multiple times throughout the
-lifecycle by other middleware, but the middleware-host will only invoke the
-callback when it needs resolve a core in order to `.replicate()`
 
 ## Priority
 
