@@ -22,13 +22,12 @@
 const { EventEmitter } = require('events')
 const assert = require('assert')
 const debug = require('debug')('decentstack')
-const { isCore, isKey, canReady, assertCore, hexkey } = require('./lib/util')
+const { isCore, isKey, canReady, assertCore, hexkey, fastHash } = require('./lib/util')
 const PeerConnection = require('./lib/peer-connection.js')
-const substream = require('hypercore-protocol-substream')
 const { defer, infer } = require('deferinfer')
+const codecs = require('codecs')
 
 const {
-  EXCHANGE,
   STATE_ACTIVE,
   STATE_DEAD
 } = require('./lib/constants')
@@ -43,19 +42,17 @@ class Decentstack extends EventEmitter {
     this.opts = {
       noTalk: opts.noTalk
     }
-    this.extensions = [EXCHANGE, substream.EXTENSION]
-    if (Array.isArray(opts.extensions)) this.extensions = [...this.extensions, ...opts.extensions].sort()
-
     // don't pollute hypercore-protocol opts
-    delete this.protocolOpts.extensions
     delete this.protocolOpts.noTalk
 
     this._middleware = {}
     this.connections = []
+    this._extensions = {}
     this._onConnectionStateChanged = this._onConnectionStateChanged.bind(this)
     this._onManifestReceived = this._onManifestReceived.bind(this)
     this._onReplicateRequest = this._onReplicateRequest.bind(this)
     this._onFeedReplicated = this._onFeedReplicated.bind(this)
+    this._onUnhandeledExtension = this._onUnhandeledExtension.bind(this)
   }
 
   get key () {
@@ -78,7 +75,7 @@ class Decentstack extends EventEmitter {
     // TODO: This is a complicated mechanism, attempting to manipulate the stack after the
     // first connection was established should throw errors.
     // Because it's not only a new manifest that has to be regerenated, we also
-    // need to run all remote-offers through our new stack, which would force us
+    // need to re-run all remote-offers through our new stack, which would force us
     // to keep the last-remote-manifest cached on each connection..
     // leaving this sourcecode here for future references.
     /*
@@ -455,6 +452,39 @@ class Decentstack extends EventEmitter {
     return infer(p, callback)
   }
 
+  /**
+   * Global extensions registration
+   * */
+  registerExtension (name, impl) {
+    if (!impl && typeof name.name === 'string') return this.registerExtension(name.name, name)
+
+    Object.assign(impl, {
+      _id: fastHash(name),
+      _codec: codecs(impl.encoding),
+      get name () { return name }
+    })
+
+    impl.send = (message, peer) => {
+      const buff = impl.encoding ? impl._codec.encode(message) : message
+      peer.exchangeChannel.extension(impl._id, buff)
+    }
+
+    impl.broadcast = (message) => {
+      for (const peer of this.connections) {
+        impl.send(message, peer)
+      }
+    }
+
+    impl.destroy = () => {
+      debug('Unregister global extension', name, impl._id.toString(16))
+      delete this._extensions[impl._id]
+    }
+
+    this._extensions[impl._id] = impl
+    debug('Register global extension', name, impl._id.toString(16))
+    return impl
+  }
+
   // ----------- Internal API --------------
 
   _collectShares (namespace, cb) {
@@ -501,12 +531,20 @@ class Decentstack extends EventEmitter {
         onmanifest: this._onManifestReceived,
         onrequest: this._onReplicateRequest,
         onstatechange: this._onConnectionStateChanged,
-        onreplicating: this._onFeedReplicated
+        onreplicating: this._onFeedReplicated,
+        onextension: this._onUnhandeledExtension
       }
     )
     const conn = new PeerConnection(initiator, this.encryptionKey, mergedOpts)
     this.connections.push(conn)
     return conn
+  }
+
+  _onUnhandeledExtension (id, message, peer) {
+    const ext = this._extensions[id]
+    if (!ext) return
+    if (ext._codec) message = ext._codec.decode(message)
+    ext.onmessage(message, peer)
   }
 
   _onConnectionStateChanged (state, prev, err, conn) {
