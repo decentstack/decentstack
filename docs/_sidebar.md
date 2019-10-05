@@ -3,3 +3,6 @@
 - [Middleware](/middleware_interface.md)
 - [API Reference](/api_reference.md)
 - [List of Middleware](/middleware_list.md)
+- Misc
+  - [Exchange Protocol](/exchange_proto.md)
+  - [License Rant](/)

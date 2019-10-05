@@ -8,6 +8,7 @@
   <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
   <meta name="ostrio-domain" content="1Cc0L2zc-zMr7SqR1cEgWnFoK5S2NsVGY2aygbmlgZT">
   <link rel="stylesheet" href="//unpkg.com/docsify/lib/themes/vue.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.css">
   <style>
   * { --theme-color: #b9428f; }
   h1 code, h2 code, h3 code { font-size: unset !important; }
@@ -19,14 +20,31 @@
     rel="noopener noreferrer"><img src="https://ostr.io/images/obdt.png"
     height="32" style="opacity: 0.01"/></a>
   <div id="app"></div>
+
+  <script src="//cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
   <script>
+    mermaid.initialize({ startOnLoad: false, securityLevel: 'loose' });
+    let graphN = 0
+
     window.$docsify = {
       name: 'Decentstack',
       repo: 'https://github.com/decentstack/decentstack',
       loadSidebar: true,
       subMaxLevel: 3,
       search: 'auto',
-      depth: 3
+      depth: 3,
+      markdown: {
+        renderer: {
+          code (code, lang) {
+            if (lang === "mermaid") {
+              return (
+                '<div class="mermaid">' + mermaid.render('mermaid-svg-' + graphN++, code) + "</div>"
+              );
+            }
+            return this.origin.code.apply(this, arguments);
+          }
+        }
+      }
     }
   </script>
   <script src="//unpkg.com/docsify/lib/docsify.min.js"></script>
