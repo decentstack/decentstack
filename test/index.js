@@ -186,7 +186,7 @@ test.skip('Composite-core replication', t => {
   })
 })
 
-test.only('Hypercore extensions', async t => {
+test.skip('Hypercore extensions', async t => {
   const encryptionKey = Buffer.alloc(32)
   encryptionKey.write('foo bars')
 
@@ -201,23 +201,24 @@ test.only('Hypercore extensions', async t => {
   const ext2 = conn.registerExtension('hello', {
     encoding: 'json',
     onmessage (decodedMessage, peer) {
+      t.equal(peer, conn, 'PeerConnection should be presented')
       ext2.send({ dead: 'feed' }, peer)
     }
   })
 
-  const ext1 = conn.registerExtension('hello', {
+  const ext1 = stack.registerExtension('hello', {
     encoding: 'json',
     onmessage (decodedMessage, peer) {
-      debugger
-      ext1.destroy() // unregisters the extension
+      t.equal(peer, conn, 'PeerConnection should be presented')
       t.notOk(stack._extensions.hello)
       t.equal(stack._extNames.indexOf('hello'), -1)
+      ext1.destroy() // unregisters the extension
     }
   })
 
   t.equal(ext1.name, 'hello')
-  ext1.broadcast({ world: 'greetings!' })
   stack.handleConnection(false, conn.stream, { live: true })
   conn.stream.once('end', t.end)
-  ext1.send({ greetins: true }, conn)
+
+  ext1.broadcast({ world: 'greetings!' })
 })

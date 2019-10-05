@@ -490,27 +490,22 @@ class Decentstack extends EventEmitter {
 
   // Create an exchange stream
   _newExchangeStream (initiator, opts = {}) {
-    if (!opts.extensions) opts.extensions = []
-    const extensions = [...this.extensions, ...opts.extensions]
-
     const mergedOpts = Object.assign(
       {},
-      this.protocolOpts,
-      opts,
-      { extensions }
+      this.protocolOpts, // Global live flag.
+
+      opts, // Local overrides
+
+      // Handlers
+      {
+        onmanifest: this._onManifestReceived,
+        onrequest: this._onReplicateRequest,
+        onstatechange: this._onConnectionStateChanged,
+        onreplicating: this._onFeedReplicated
+      }
     )
-    // TODO:  filter mergedOpts to only allow
-    // live
-    // download
-    // upload
-    // encrypt
-    // stream
     const conn = new PeerConnection(initiator, this.encryptionKey, mergedOpts)
     this.connections.push(conn)
-    conn.on('state-change', this._onConnectionStateChanged)
-    conn.on('manifest', this._onManifestReceived)
-    conn.on('replicate', this._onReplicateRequest)
-    conn.on('feed', this._onFeedReplicated)
     return conn
   }
 
@@ -536,10 +531,6 @@ class Decentstack extends EventEmitter {
         break
       case STATE_DEAD:
         // cleanup up
-        conn.removeListener('state-changed', this._onConnectionStateChanged)
-        conn.removeListener('manifest', this._onManifestReceived)
-        conn.removeListener('replicate', this._onReplicateRequest)
-        conn.removeListener('feed', this._onFeedReplicated)
         this.connections.splice(this.connections.indexOf(conn), 1)
         this.emit('disconnect', err, conn)
         if (conn.lastError) {
@@ -614,7 +605,9 @@ class Decentstack extends EventEmitter {
     // to some third malicious party.
     // Each peer should be expected to always build up their own manifests an be responsible
     // for their own words to avoid wasting bandwidth and processing power on inaccurate advertisement.
-    const namespace = conn.allowedKeysNS[key]
+
+    if (Buffer.isBuffer(key)) key = key.toString('hex')
+    const namespace = conn.exchangeExt.negotiatedKeysNS[key]
     this.snapshot([key], namespace, (err, manifest) => {
       // this is an indicator of faulty middleware
       // maybe even kill the process?
@@ -625,7 +618,7 @@ class Decentstack extends EventEmitter {
       this.connections.forEach(peer => {
         if (peer === conn) return // Skip self
         // Use "allowed keys" (offered + accepted).
-        if (peer.allowedKeys.indexOf(key) === -1) {
+        if (peer.exchangeExt.negotiatedKeys.indexOf(key) === -1) {
           const reqTime = (new Date()).getTime()
           debug(`Forwarding ${hexkey(key).slice(0, 6)} feed to ${peer.shortid}`)
           peer.sendManifest(namespace, manifest, (err, selectedFeeds) => {
