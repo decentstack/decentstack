@@ -238,6 +238,41 @@ replication manager.
 Tells the manager to close all peer connections and
 notifies all middleware that the stack is destined for the garbage collector.
 
+### Function: registerExtension
+
+`registerExtension ([name], impl)`
+
+**Arguments**
+
+- optional `{String} name` If `impl.name` is defined, then `name` argument can be omitted
+- `{Object}` An implementation of hypercore extension
+ - `{Function} onmessage (message, peer)` Message handler
+ - `{String} name` Name of your extension.
+ - `{String|Object} encoding` Message encoding
+
+**Returns**
+- `{Object} handle` The same `impl` object provided as input but extended with:
+  - `{String} name` Set to `name` argument used during `registerExtension()` if provided
+  - `{Function} broadcast(message)` Broadcast message to all peers
+  - `{Function} send(message, peer)` Send message to specific peer
+  - `{Function} destroy` Unregister the extension.
+
+**Description**
+
+Registers an stack-wide hypercore extension that will be available all connected Peers
+
+```js
+const ext = stack.registerExtension('hello', {
+  onmessage(message, peer) {
+    console.log('Received:', message)
+    ext.send('Right back at you', peer)
+  }
+})
+ext.broadcast('Greetings!')
+```
+
+!> All extensions registered through this interface use `PeerConnection#exchangeChannel` as transport medium.
+
 ### Event: connect
 
 Name: `"connect"`
@@ -271,7 +306,6 @@ after this point)
 `conn.lastError` holds a copy of `error` for future lookups.
 
 ## class `PeerConnection`
-extends `EventEmitter`
 
 A peer connection holds the state of a connected peer, keeping track of
 what the peer has offered and requested.
@@ -286,11 +320,12 @@ the hypercore-protocol `Protocol` class.
 - _ro_ **stream** `{Object}` hypercore-protocol instance
 - _ro_ **activeChannels** `{Array<Channel|Substream>}` list of currently active replication streams via hypercore-protocol Channel or virtual substreams.
 - _ro_ **activeKeys** `{Array<string>}` list of actively replicating core keys
-- _ro_ **offeredKeys** `{Object<NS:Array<String>>}` list of core keys that have been
-  offered on this connection
-- _ro_ **requestedKeys** `{Object<NS:Array<String>>}` list of core keys that were requested
-  by us.
-- _ro_ **remoteOfferedKeys** `{Object<NS:Array<String>>}` list of core keys that remote at some point offered to us.
+- _ro_ **exchangeExt** See `lib/exchange.js` for more info
+  - _ro_ **offeredKeys** `{Object<NS:Array<String>>}` list of core keys that have been
+    offered on this connection
+  - _ro_ **requestedKeys** `{Object<NS:Array<String>>}` list of core keys that were requested
+    by us.
+  - _ro_ **remoteOfferedKeys** `{Object<NS:Array<String>>}` list of core keys that remote at some point offered to us.
 - _ro_ **stats** `{Object}` an object containing exchange-stats:
  - ```{ snapshotsSent: 0,
       snapshotsRecv: 0,
@@ -311,6 +346,13 @@ the hypercore-protocol `Protocol` class.
 - `{Buffer|string} exchangeKey` The key that should be used when opening the exchange channel
 - `{Object} opts` Same options as hypercore-protocol plus the following extra:
   - ~~`{boolean} useVirtual` use substreams instead of hypercore protocol channels~~ redesign in progress
+  - `{Function} onmanifest (snapshot, self)` Manifest received handler
+  - `{Function} onrequest (request, self)` ReplicationRequest handler
+  - `{Function} onstatechange (newState, prevState, error, peer)` PeerConnection state handler
+  - `{Function} onreplicating (key, self)` Core replication start handler
+  - `{Function} onopen (self)` When PeerConnection enters state `ESTABLISHED`
+  - `{Function} onclose (error, self)` When PeerConnection enters state `DEAD`
+  - `{Function} onextension (id, msg, self)` Unregistered extensions are forwarded to this handler
 
 **Description**
 
@@ -330,6 +372,45 @@ c2.on('state-change', console.log.bind(null, 'Conn2 changed state:'))
 
 c1.stream.pipe(c2.stream).pipe(c1.stream)
 ```
+
+### Function: registerExtension
+
+`registerExtension ([name], impl)`
+
+**Arguments**
+
+- optional `{String} name` If `impl.name` is defined, then `name` argument can be omitted
+- `{Object}` An implementation of hypercore extension
+ - `{Function} onmessage (message, peer)` Message handler
+ - `{String} name` Name of your extension.
+ - `{String|Object} encoding` Message encoding
+
+**Returns**
+- `{Object} handle` The same `impl` object provided as input but extended with:
+  - `{String} name` Set to `name` argument used during `registerExtension()` if provided
+  - `{Function} broadcast(message)` identical to function `send`
+  - `{Function} send(message)` Transmits the message to the remote end of this PeerConnection
+  - `{Function} destroy` Unregister the extension.
+
+**Description**
+
+Registers an **Peer Specific** hypercore extension that will be available only to this
+peer.
+
+```js
+const peer = new PeerConnection(true)
+const ext = peer.registerExtension('hello', {
+  onmessage(message, peer) {
+    console.log('Received:', message)
+    ext.send('Right back at you')
+  }
+})
+ext.broadcast('Greetings!')
+```
+
+!> All extensions registered through this interface use `PeerConnection#exchangeChannel` as transport medium.
+
+!> When stack-wide and peer-specific extensions with the same `name` are registered. Then the peer-specific extension has priority.
 
 ### Function: joinFeed
 `TODO: document once api stabilized`
@@ -359,16 +440,3 @@ If `error` was passed, then the connection will be destroyed and an `"error"`
 Regardless of error, a `"state-change"` event will be emitted on the
 `PeerConnection` instance as this is the function that causes the
 state to transition from `init|active` to `dead`.
-
-### Event: state-change
-`TODO: document once api stabilized`
-### Event: connected
-`TODO: document once api stabilized`
-### Event: end
-`TODO: document once api stabilized`
-### Event: feed
-`TODO: document once api stabilized`
-### Event: manifest
-`TODO: document once api stabilized`
-### Event: replicate
-`TODO: document once api stabilized`
