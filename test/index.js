@@ -187,7 +187,7 @@ test.skip('Composite-core replication', t => {
 })
 
 test('Hypercore extensions support (local|global)', async t => {
-  t.plan(9)
+  t.plan(10)
   const encryptionKey = Buffer.alloc(32)
   encryptionKey.write('foo bars')
 
@@ -196,7 +196,7 @@ test('Hypercore extensions support (local|global)', async t => {
 
   const conn = new PeerConnection(true, encryptionKey, {
     live: true,
-    onclose: t.error
+    onclose: err => t.error(err, 'Close Handler invoked w/o error')
   })
 
   const peerExt = conn.registerExtension('hello', {
