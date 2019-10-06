@@ -460,9 +460,11 @@ class Decentstack extends EventEmitter {
 
     Object.assign(impl, {
       _id: fastHash(name),
-      _codec: codecs(impl.encoding),
-      get name () { return name }
+      _codec: codecs(impl.encoding)
     })
+    if (impl.name !== name) {
+      impl.name = name
+    }
 
     impl.send = (message, peer) => {
       const buff = impl.encoding ? impl._codec.encode(message) : message
