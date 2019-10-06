@@ -1,6 +1,6 @@
 {
   "name": "decentstack",
-  "version": "0.7.5",
+  "version": "0.8.0",
   "description": "Decentralized application framework",
   "main": "index.js",
   "author": "Tony Ivanov <telamohn@pm.me>",
