@@ -8,7 +8,7 @@ const { Decentstack, PeerConnection } = require('..')
 const ArrayStore = require('../examples/array-store')
 
 test('basic replication', async t => {
-  t.plan(11)
+  t.plan(12)
   const encryptionKey = Buffer.alloc(32)
   encryptionKey.write('foo bars')
   const stack = new Decentstack(encryptionKey)
@@ -63,6 +63,7 @@ test('basic replication', async t => {
   const finishUp = () => {
     t.equal(localStore.feeds.length, 4, 'All feeds available on local')
     t.equal(remoteStore.feeds.length, 4, 'All feeds available on remote')
+    t.equal(connection.queue.remaining, 0)
     stack.close(t.end)
   }
 })

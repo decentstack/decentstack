@@ -2669,6 +2669,11 @@ nanomatch@^1.2.9:
     snapdragon "^0.8.1"
     to-regex "^3.0.1"
 
+nanoqueue@^1.0.0:
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/nanoqueue/-/nanoqueue-1.0.0.tgz#5438b00c5e19e970a1b5463df73a4e8079e89fe6"
+  integrity sha512-NwthqLykhuxqjhhHaIjRpPHj71EhJA8xj8JGLyyYlyv6H0OYEM2YCEzG+I6w29zUirhbo/Z/TFJeZzKXUOibyA==
+
 napi-macros@^1.8.2:
   version "1.8.2"
   resolved "https://registry.yarnpkg.com/napi-macros/-/napi-macros-1.8.2.tgz#299265c1d8aa401351ad0675107d751228c03eda"

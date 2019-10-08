@@ -605,11 +605,9 @@ class Decentstack extends EventEmitter {
         // Both local initiative and remote request race
         // to saturate the stream with desired feeds.
         // Thus check one more time if the feed is already
-        // joined to avoid killing the stream in vain.
+        // joined
         if (conn.isActive(key)) return
-        conn.joinFeed(feed, err => {
-          if (err) return conn.kill(err)
-        })
+        conn.replicateCore(feed)
       })
     })
   }
