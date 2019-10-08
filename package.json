@@ -22,8 +22,9 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/telamon/replic8.git"
+    "url": "git+https://github.com/decentstack/decentstack.git"
   },
+  "homepage": "https://github.com/decentstack/decentstack",
   "dependencies": {
     "codecs": "^2.0.0",
     "deferinfer": "^1.0.1",
