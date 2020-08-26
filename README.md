@@ -2,8 +2,22 @@
 
 Decentstack
 =================
+## UPDATE 2020-08
+I have for now managed to answer my questions regarding kappa/multifeed design pattern.
+What I was fascinated by is known as the "spaghetti-consensus" / "DAG-consensus" which I believe can be built on
+kappa/multifeed architecture by introducing logic to selectively replicate feeds.
 
-[1.0 Announcement](https://github.com/decentstack/decentstack/issues/2)
+Seeing other projects progressing down this road has made me realize that I hold no
+interest in working with a _global_-consensus algorithm.
+
+I have since moved my focus to **offline**-first technology and will most likely transform decentstack
+into an entry level starter kit once I have positive results.
+
+If you wish to say hi then send me a PM somehwere or find my dev-log in hyperspace. :thumbsup:
+
+/telamohn
+
+## [1.0 Announcement](https://github.com/decentstack/decentstack/issues/2)
 
 ### Welcome!
 
