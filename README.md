@@ -17,6 +17,11 @@ If you wish to say hi then send me a PM somehwere or find my dev-log in hyperspa
 
 /telamohn
 
+P.S.
+If you are working with hyper-tech and is reading this because you're haunted by the net-spooks,
+check out [hyper-simulator](https://github.com/decentstack/hyper-simulator) it's a solid artifact that came
+out of this research.
+
 ## [1.0 Announcement](https://github.com/decentstack/decentstack/issues/2)
 
 ### Welcome!
